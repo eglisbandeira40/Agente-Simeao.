@@ -193,7 +193,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const { phone, pushName = 'cliente', textoRecebido } = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nglobal.sessoes[phone] = { etapa: 'menu', perfil: '', nome: pushName, servico: '', email: '', telefone: '', hubspotId: '', mensagensCount: 1, ultimaAtividade: Date.now() };\n\nconst mensagem = `Oi, *${pushName}*! 🌿 Sou a *Ana*, assistente do escritório *Escritório José Simeão Advocacia*, especializado em  HC para auto cultivo de *Cannabis Medicinal*.\\n\\nComo posso te ajudar hoje?\\n\\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\\n3️⃣ - Sou *médico, dentista, fisioterapeuta ou veterinário* e desejo uma consultoria\\n\\nDigite o *número* da sua opção 👇`;\n\nreturn [{ json: { phone, pushName, nome: pushName, message: mensagem, etapa: 'menu' } }];"
+        "jsCode": "const { phone, pushName = 'cliente', textoRecebido } = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nglobal.sessoes[phone] = { etapa: 'aguardando_nome', perfil: '', nome: '', servico: '', email: '', telefone: '', hubspotId: '', mensagensCount: 1, ultimaAtividade: Date.now() };\n\nconst mensagem = `Oi! 🌿 Sou a *Ana*, assistente do escritório *Escritório José Simeão Advocacia*, especializado em HC para autocultivo de *Cannabis Medicinal*.\\n\\nAntes de começarmos, qual é o seu nome? 😊`;\n\nreturn [{ json: { phone, pushName, message: mensagem, etapa: 'aguardando_nome' } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -206,7 +206,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const dados = $('Extrair Dados da Mensagem').item.json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[dados.phone]) global.sessoes[dados.phone] = {};\n\nconst nome = (dados.textoRecebido || '').trim().length >= 2 ? dados.textoRecebido.trim() : (dados.pushName || 'cliente');\nObject.assign(global.sessoes[dados.phone], { nome, etapa: 'menu', ultimaAtividade: Date.now() });\n\nconst mensagem = `Prazer em te conhecer, *${nome}*! 😊\\n\\nO escritório *Simeão Advogados* é especializado em *Cannabis Medicinal*. Como posso te ajudar?\\n\\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\\n\\nDigite o *número* da sua opção 👇`;\n\nreturn [{ json: { phone: dados.phone, pushName: dados.pushName, nome, message: mensagem, etapa: 'menu' } }];\n"
+        "jsCode": "const dados = $('Extrair Dados da Mensagem').item.json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[dados.phone]) global.sessoes[dados.phone] = {};\n\nconst nome = (dados.textoRecebido || '').trim().length >= 2 ? dados.textoRecebido.trim() : (dados.pushName || 'cliente');\nObject.assign(global.sessoes[dados.phone], { nome, etapa: 'menu', ultimaAtividade: Date.now() });\n\nconst mensagem = `Prazer em te conhecer, *${nome}*! 😊\\n\\nO escritório *Simeão Advogados* é especializado em *Cannabis Medicinal*. Como posso te ajudar?\\n\\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\\n3️⃣ - Sou *médico, dentista, fisioterapeuta ou veterinário* e desejo uma consultoria\\n\\nDigite o *número* da sua opção 👇`;\n\nreturn [{ json: { phone: dados.phone, pushName: dados.pushName, nome, message: mensagem, etapa: 'menu' } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -246,7 +246,9 @@
         -1568
       ],
       "id": "a061e847-360b-4819-a58f-863d658d23d2",
-      "name": "Criar Lead Inicial HubSpot"
+      "name": "Criar Lead Inicial HubSpot",
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
     },
     {
       "parameters": {

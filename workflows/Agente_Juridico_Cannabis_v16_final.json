@@ -510,7 +510,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ properties: { hs_note_body: 'Lead recebido via WhatsApp\\n\\n👤 Nome: ' + ($('Atualizar Lead HubSpot').item.json.properties.firstname || 'Nao informado') + '\\n📱 Telefone: ' + ($('Atualizar Lead HubSpot').item.json.properties.phone || 'Nao informado') + '\\n📧 Email: ' + ($('Atualizar Lead HubSpot').item.json.properties.email || 'Nao informado') + '\\n⚖️ Servico: ' + ($('Atualizar Lead HubSpot').item.json.properties.area_juridica || 'Nao informado'), hs_timestamp: new Date().toISOString() }, associations: [{ to: { id: $('Atualizar Lead HubSpot').item.json.id }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 202 }] }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ properties: { hs_note_body: 'Lead recebido via WhatsApp\\n\\n👤 Nome: ' + ($('Dados Completos?').item.json.nome || 'Nao informado') + '\\n📱 Telefone: ' + ($('Dados Completos?').item.json.telefone || $('Dados Completos?').item.json.phone || 'Nao informado') + '\\n📧 Email: ' + ($('Dados Completos?').item.json.email || 'Nao informado') + '\\n⚖️ Servico: ' + ($('Dados Completos?').item.json.servico || 'Nao informado'), hs_timestamp: new Date().toISOString() }, associations: [{ to: { id: $('Atualizar Lead HubSpot').item.json.id }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 202 }] }] }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -529,7 +529,7 @@
         "operation": "send",
         "phoneNumberId": "1120643227802579",
         "recipientPhoneNumber": "+55 11 94132-1970",
-        "textBody": "=🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\nNome: {{ $('Atualizar Lead HubSpot').item.json.properties.firstname || 'Nao informado' }}\nWhatsApp: {{ $('Atualizar Lead HubSpot').item.json.properties.phone || 'Nao informado' }}\nServico: {{ $('Atualizar Lead HubSpot').item.json.properties.area_juridica || 'Nao informado' }}\n\n⚠️ *Entrar em contato o quanto antes!*",
+        "textBody": "=🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\nNome: {{ $('Dados Completos?').item.json.nome || 'Nao informado' }}\nWhatsApp: {{ $('Dados Completos?').item.json.telefone || $('Dados Completos?').item.json.phone || 'Nao informado' }}\nServico: {{ $('Dados Completos?').item.json.servico || 'Nao informado' }}\n\n⚠️ *Entrar em contato o quanto antes!*",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.whatsApp",

@@ -387,7 +387,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const global = $getWorkflowStaticData('global');\nconst agente = $('AI Agent1').item.json;\nconst ctx = $('Preparar Contexto para IA').item.json;\n\nlet respostaIA = agente?.output || agente?.text || agente?.content || agente?.response || 'Desculpe, tive um problema técnico. Tente novamente em instantes.';\n\nconst emailMatch = ctx.mensagemUsuario?.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/);\nif (emailMatch && !ctx.email && global.sessoes?.[ctx.phone]) global.sessoes[ctx.phone].email = emailMatch[0];\n\nconst atendimentoConcluido = /\\[ATENDIMENTO_CONCLUIDO\\]/.test(respostaIA);\nrespostaIA = respostaIA.replace(/\\s*\\[ATENDIMENTO_CONCLUIDO\\]\\s*/g, '').trim();\n\nif (atendimentoConcluido && global.sessoes?.[ctx.phone]) {\n  global.sessoes[ctx.phone].etapa = 'atendimento_concluido';\n}\n\nreturn [{ json: {\n  ...ctx,\n  message: respostaIA,\n  dadosCompletos: atendimentoConcluido,\n  precisaAdvogado: atendimentoConcluido\n} }];\n"
+        "jsCode": "const global = $getWorkflowStaticData('global');\nconst agente = $('AI Agent1').item.json;\nconst ctx = $('Preparar Contexto para IA').item.json;\n\nlet respostaIA = agente?.output || agente?.text || agente?.content || agente?.response || 'Desculpe, tive um problema técnico. Tente novamente em instantes.';\n\nconst emailMatch = ctx.mensagemUsuario?.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/);\nif (emailMatch && !ctx.email && global.sessoes?.[ctx.phone]) global.sessoes[ctx.phone].email = emailMatch[0];\n\nconst atendimentoConcluido = /\\[ATENDIMENTO_CONCLUIDO\\]/i.test(respostaIA) || /equipe j[áa] foi notificada/i.test(respostaIA);\nrespostaIA = respostaIA.replace(/\\s*\\[ATENDIMENTO_CONCLUIDO\\]\\s*/g, '').trim();\n\nif (atendimentoConcluido && global.sessoes?.[ctx.phone]) {\n  global.sessoes[ctx.phone].etapa = 'atendimento_concluido';\n}\n\nreturn [{ json: {\n  ...ctx,\n  message: respostaIA,\n  dadosCompletos: atendimentoConcluido,\n  precisaAdvogado: atendimentoConcluido\n} }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -529,7 +529,7 @@
         "operation": "send",
         "phoneNumberId": "1120643227802579",
         "recipientPhoneNumber": "+55 11 94132-1970",
-        "textBody": "🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\nNome: {{ $('Atualizar Lead HubSpot').item.json.properties.firstname || 'Nao informado' }}\nWhatsApp: {{ $('Atualizar Lead HubSpot').item.json.properties.phone || 'Nao informado' }}\nServico: {{ $('Atualizar Lead HubSpot').item.json.properties.area_juridica || 'Nao informado' }}\n\n⚠️ *Entrar em contato o quanto antes!*",
+        "textBody": "=🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\nNome: {{ $('Atualizar Lead HubSpot').item.json.properties.firstname || 'Nao informado' }}\nWhatsApp: {{ $('Atualizar Lead HubSpot').item.json.properties.phone || 'Nao informado' }}\nServico: {{ $('Atualizar Lead HubSpot').item.json.properties.area_juridica || 'Nao informado' }}\n\n⚠️ *Entrar em contato o quanto antes!*",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.whatsApp",

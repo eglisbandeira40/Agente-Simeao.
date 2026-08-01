@@ -175,6 +175,30 @@
               },
               "renameOutput": true,
               "outputKey": "assessoria_palestra"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "r7",
+                    "leftValue": "={{ $json.etapa }}",
+                    "rightValue": "coletar_dados_cliente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "coletar_dados_cliente"
             }
           ]
         },
@@ -265,7 +289,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[input.phone]) global.sessoes[input.phone] = {};\nconst s = global.sessoes[input.phone];\ns.ultimaAtividade = Date.now();\nconst opcao = (input.textoRecebido || '').trim()\n  .replace(/1️⃣/g, '1')\n  .replace(/2️⃣/g, '2')\n  .replace(/3️⃣/g, '3');\n\nconst querAdvogado = ['advogado','advogada','humano','pessoa','atendente'].some(p => opcao.toLowerCase().includes(p));\nif (querAdvogado) {\n  s.etapa = 'falar_advogado';\n  return [{ json: { ...input, message: 'Entendido! Um advogado especialista entrará em contato em breve. 🌿', etapa: 'falar_advogado', precisaAdvogado: true } }];\n}\n\nconst opcoes = {\n  '1': { perfil: 'cliente', servico: 'HC para Autocultivo Medicinal', etapa: 'agente_ia',\n    mensagem: 'Ótimo! 🌿 Vou te fazer 3 perguntas rápidas antes de te encaminhar ao nosso especialista.\\n\\nVocê já possui prescrição médica indicando o uso de Cannabis?\\n\\n1 - Sim, já tenho\\n2 - Ainda não tenho' },\n  '2': { perfil: 'palestra', servico: 'Interesse em Palestra - Cannabis Medicinal', etapa: 'assessoria_palestra',\n    mensagem: 'Que ótimo! 🎤 Realizamos *palestras e treinamentos* sobre Cannabis Medicinal e seus aspectos jurídicos.\\n\\nPara entrarmos em contato, preciso de mais alguns dados.\\n\\nQual o seu *e-mail* para contato?' },\n  '3': { perfil: 'profissional', servico: 'Consultoria para Profissional de Saúde', etapa: 'agente_ia',\n    mensagem: 'Que ótimo! 🌿 Oferecemos *consultoria especializada* para médicos, dentistas, fisioterapeutas, veterinários e farmacêuticos que atuam ou desejam atuar com Cannabis Medicinal.\\n\\nMe conta um pouco mais sobre a sua área de atuação e como podemos te ajudar 👇' }\n};\n\nif (opcoes[opcao]) {\n  const { perfil, servico, etapa, mensagem } = opcoes[opcao];\n  Object.assign(s, { perfil, servico, etapa });\n  return [{ json: { ...input, perfil, servico, message: mensagem } }];\n}\n\nreturn [{ json: { ...input, servico: '', perfil: '', message: 'Por favor, digite apenas o *número* da opção:\\n\\n1️⃣ - Sou paciente ou familiar (*HC para autocultivo*)\\n2️⃣ - Interesse em palestra\\n3️⃣ - Sou profissional de saúde e quero uma consultoria' } }];"
+        "jsCode": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[input.phone]) global.sessoes[input.phone] = {};\nconst s = global.sessoes[input.phone];\ns.ultimaAtividade = Date.now();\nconst opcao = (input.textoRecebido || '').trim()\n  .replace(/1️⃣/g, '1')\n  .replace(/2️⃣/g, '2')\n  .replace(/3️⃣/g, '3');\n\nconst querAdvogado = ['advogado','advogada','humano','pessoa','atendente'].some(p => opcao.toLowerCase().includes(p));\nif (querAdvogado) {\n  s.etapa = 'falar_advogado';\n  return [{ json: { ...input, message: 'Entendido! Um advogado especialista entrará em contato em breve. 🌿', etapa: 'falar_advogado', precisaAdvogado: true } }];\n}\n\nconst opcoes = {\n  '1': { perfil: 'cliente', servico: 'HC para Autocultivo Medicinal', etapa: 'coletar_dados_cliente',\n    mensagem: 'Ótimo! 🌿 Vou te fazer 3 perguntas rápidas antes de te encaminhar ao nosso especialista.\\n\\nVocê já possui prescrição médica indicando o uso de Cannabis?\\n\\n1 - Sim, já tenho\\n2 - Ainda não tenho' },\n  '2': { perfil: 'palestra', servico: 'Interesse em Palestra - Cannabis Medicinal', etapa: 'assessoria_palestra',\n    mensagem: 'Que ótimo! 🎤 Realizamos *palestras e treinamentos* sobre Cannabis Medicinal e seus aspectos jurídicos.\\n\\nPara entrarmos em contato, preciso de mais alguns dados.\\n\\nQual o seu *e-mail* para contato?' },\n  '3': { perfil: 'profissional', servico: 'Consultoria para Profissional de Saúde', etapa: 'agente_ia',\n    mensagem: 'Que ótimo! 🌿 Oferecemos *consultoria especializada* para médicos, dentistas, fisioterapeutas, veterinários e farmacêuticos que atuam ou desejam atuar com Cannabis Medicinal.\\n\\nMe conta um pouco mais sobre a sua área de atuação e como podemos te ajudar 👇' }\n};\n\nif (opcoes[opcao]) {\n  const { perfil, servico, etapa, mensagem } = opcoes[opcao];\n  Object.assign(s, { perfil, servico, etapa });\n  return [{ json: { ...input, perfil, servico, message: mensagem } }];\n}\n\nreturn [{ json: { ...input, servico: '', perfil: '', message: 'Por favor, digite apenas o *número* da opção:\\n\\n1️⃣ - Sou paciente ou familiar (*HC para autocultivo*)\\n2️⃣ - Interesse em palestra\\n3️⃣ - Sou profissional de saúde e quero uma consultoria' } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -671,6 +695,19 @@
         -5440,
         -1312
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[input.phone]) global.sessoes[input.phone] = {};\nconst s = global.sessoes[input.phone];\ns.ultimaAtividade = Date.now();\n\nconst texto = (input.textoRecebido || '').trim();\nconst nome = s.nome || input.nome || 'Cliente';\nconst servico = s.servico || input.servico || 'HC para Autocultivo Medicinal';\n\nconst normalizaResposta = (t) => {\n  const low = t.toLowerCase().trim();\n  if (low === '1' || low.includes('sim')) return 'Sim';\n  if (low === '2' || low.includes('nao') || low.includes('não')) return 'Não';\n  return t;\n};\n\nlet mensagem;\nlet dadosCompletos = false;\nlet resumo = '';\n\nif (!s.respPrescricao) {\n  s.respPrescricao = normalizaResposta(texto);\n  mensagem = `Ótimo, obrigada! 🌿\\n\\nVocê já possui *laudo agronômico* referente ao cultivo?\\n\\n1 - Sim, já tenho\\n2 - Ainda não tenho`;\n} else if (!s.respLaudoAgronomico) {\n  s.respLaudoAgronomico = normalizaResposta(texto);\n  mensagem = `Perfeito! 🌿\\n\\nVocê já realizou algum *curso de autocultivo* medicinal?\\n\\n1 - Sim\\n2 - Não`;\n} else {\n  s.respCurso = normalizaResposta(texto);\n  s.etapa = 'atendimento_concluido';\n  resumo = `Prescrição médica: ${s.respPrescricao}. Laudo agronômico: ${s.respLaudoAgronomico}. Curso de autocultivo: ${s.respCurso}.`;\n  s.resumo = resumo;\n  dadosCompletos = true;\n  mensagem = `Obrigada, *${nome}*! ✅ Suas informações foram registradas e nossa equipe já foi notificada.\\n\\nEm breve um especialista vai entrar em contato pelo seu WhatsApp. 🌿`;\n}\n\nreturn [{ json: { ...input, nome, servico, resumo, dadosCompletos, message: mensagem } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5632,
+        -320
+      ],
+      "id": "b1c9d4e5-6f7a-48b2-9c3d-1e2f3a4b5c6d",
+      "name": "Coletar Dados HC Autocultivo"
     }
   ],
   "pinData": {},
@@ -744,6 +781,13 @@
         [
           {
             "node": "Resposta Aguardando Advogado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Coletar Dados HC Autocultivo",
             "type": "main",
             "index": 0
           }
@@ -980,6 +1024,22 @@
         [
           {
             "node": "Atualizar Area no HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Coletar Dados HC Autocultivo": {
+      "main": [
+        [
+          {
+            "node": "Dados Completos?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Enviar mensagem cliente",
             "type": "main",
             "index": 0
           }

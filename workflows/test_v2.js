@@ -433,6 +433,69 @@ head('CENARIO Q — conversa normal nao e afetada pelo teto');
         !/encerrada automaticamente/i.test(r.crm.resumoConversa), r.crm.resumoConversa);
 }
 
+// ================================================================ R
+head('CENARIO R — profissional de saude de qualquer nicho qualifica sem prescricao');
+{
+  const nichos = [
+    ['sou nutricionista e quero orientar meus pacientes', 'nutricionista'],
+    ['sou psicologa, atendo pacientes com ansiedade', 'psicologa'],
+    ['sou farmaceutico de manipulacao', 'farmaceutico'],
+    ['sou enfermeira em cuidados paliativos', 'enfermeira'],
+    ['sou veterinaria', 'veterinaria'],
+  ];
+  for (const [fala, nicho] of nichos) {
+    const tel = '55119' + Math.random().toString().slice(2, 10);
+    const st = novoState(tel, 'Prof');
+    const ai = aiRoteiro([
+      'Que bom! Me conta sua área e o que você busca? 🌿[PERFIL:profissional]',
+      'Perfeito! O Dr. José Simeão fala com você em breve. 🌿\n[RESUMO_INICIO]\nProfissional de saude (' + nicho + ') busca consultoria.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
+    ]);
+    turno(st, 'oi', ai);
+    turno(st, 'Prof', ai);
+    turno(st, fala, ai);
+    const r = turno(st, 'quero consultoria', ai);
+    check(`${nicho}: qualificou sem prescricao`,
+          r.saida.qualificado === true && r.saida.atendimentoFinalizado === true, r.saida.statusLead);
+    check(`${nicho}: nao foi barrado pela trava`, !/prescrição médica/i.test(r.msg), r.msg);
+  }
+}
+
+// ================================================================ S
+head('CENARIO S — palestra qualifica sem requisito nenhum');
+{
+  const st = novoState('5511900000017', 'Palestra');
+  const ai = aiRoteiro([
+    'Que legal! Qual o público e tem data prevista? 🎤[PERFIL:palestra]',
+    'Perfeito! O Dr. José Simeão retorna pra você. 🌿\n[RESUMO_INICIO]\nConvite para palestra em associacao. Sem data definida.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
+  ]);
+  turno(st, 'oi', ai);
+  turno(st, 'Palestra', ai);
+  turno(st, 'quero convidar pra uma palestra', ai);
+  const r = turno(st, 'sem data ainda', ai); show(r);
+  check('qualificou sem prescricao', r.saida.qualificado === true);
+  check('trava nao exigiu prescricao', !/prescrição médica/i.test(r.msg), r.msg);
+  check('CRM perfil palestra', r.crm.perfil === 'palestra');
+}
+
+// ================================================================ T
+head('CENARIO T — a trava de prescricao vale SO para paciente/familiar');
+{
+  // profissional tentando fechar sem prescricao: deve passar
+  const st1 = novoState('5511900000018', 'P');
+  const ai1 = aiRoteiro(['Certo! 🌿[PERFIL:profissional]\n[RESUMO_INICIO]\nMedico busca consultoria.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]']);
+  turno(st1, 'oi', ai1); turno(st1, 'P', ai1);
+  const r1 = turno(st1, 'sou medico', ai1);
+  check('profissional passa sem prescricao', r1.saida.atendimentoFinalizado === true);
+
+  // paciente tentando fechar sem prescricao: deve travar
+  const st2 = novoState('5511900000019', 'C');
+  const ai2 = aiRoteiro(['Certo! 🌿[PERFIL:cliente]\n[RESUMO_INICIO]\nPaciente busca HC.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]']);
+  turno(st2, 'oi', ai2); turno(st2, 'C', ai2);
+  const r2 = turno(st2, 'quero pra mim', ai2);
+  check('paciente e travado sem prescricao', r2.saida.atendimentoFinalizado === false);
+  check('paciente recebe a pergunta de corte', /prescrição médica/i.test(r2.msg), r2.msg);
+}
+
 console.log('\n' + '='.repeat(70));
 console.log(falhas === 0 ? 'TODOS OS TESTES PASSARAM ✅' : `${falhas} VERIFICACAO(OES) FALHARAM ❌`);
 console.log('='.repeat(70));

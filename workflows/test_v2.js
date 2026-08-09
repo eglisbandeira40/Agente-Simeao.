@@ -297,6 +297,62 @@ head('CENARIO J — leitura das tags [PERFIL] e [PRESCRICAO]');
   }
 }
 
+// ================================================================ K
+head('CENARIO K — TRAVA: IA tenta fechar sem ter perguntado a prescricao');
+{
+  const st = novoState('5511900000011', 'Bavio');
+  // simula exatamente o bug: IA identifica cliente e ja tenta encerrar inventando dados
+  const ai = aiRoteiro([
+    'Olá! Essa autorização é para uso pessoal ou de um familiar? 🌿[PERFIL:cliente]',
+    'Perfeito, vou encaminhar pro nosso time! 🌿\n[RESUMO_INICIO]\nBusca HC autocultivo. Possui prescricao medica e laudo agronomico.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
+  ]);
+  let r;
+  turno(st, 'oi', ai);
+  turno(st, 'bavio', ai);
+  r = turno(st, 'quro saber como funiona para obter o uso', ai); show(r);
+  check('identificou cliente', st.static.sessoes['5511900000011'].perfil === 'cliente');
+
+  r = turno(st, 'para so', ai); show(r);
+  check('TRAVA: nao encerrou sem prescricao', r.saida.atendimentoFinalizado === false, r.saida);
+  check('TRAVA: nao notificou advogado', r.notificou === false);
+  check('TRAVA: nao mandou pro CRM', r.crm === null);
+  check('TRAVA: pergunta a prescricao', /prescrição médica/i.test(r.msg), r.msg);
+  check('TRAVA: resumo inventado descartado', !r.saida.resumo, r.saida.resumo);
+}
+
+// ================================================================ L
+head('CENARIO L — TRAVA: IA tenta fechar sem ter identificado o perfil');
+{
+  const st = novoState('5511900000012', 'Vago');
+  const ai = aiRoteiro([
+    'Certo, vou encaminhar! 🌿\n[RESUMO_INICIO]\nLead quer informacoes.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
+  ]);
+  turno(st, 'oi', ai);
+  turno(st, 'Vago', ai);
+  const r = turno(st, 'preciso de uma informacao', ai); show(r);
+  check('TRAVA: nao encerrou sem perfil', r.saida.atendimentoFinalizado === false);
+  check('TRAVA: nao notificou advogado', r.notificou === false);
+  check('TRAVA: pede para direcionar', /profissional de saúde/i.test(r.msg), r.msg);
+}
+
+// ================================================================ M
+head('CENARIO M — TRAVA libera quando os dados obrigatorios existem');
+{
+  const st = novoState('5511900000013', 'Ok');
+  const ai = aiRoteiro([
+    'Entendi! E você já tem a prescrição médica? 🌿[PERFIL:cliente]',
+    'Ótimo! Vou encaminhar pro nosso time. 🌿[PRESCRICAO:sim]\n[RESUMO_INICIO]\nBusca HC autocultivo, uso proprio. Prescricao medica: sim. Laudo agronomico: nao informado. Curso: nao informado.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
+  ]);
+  turno(st, 'oi', ai);
+  turno(st, 'Ok', ai);
+  turno(st, 'quero HC pra uso proprio', ai);
+  const r = turno(st, 'tenho sim', ai); show(r);
+  check('encerrou normalmente', r.saida.atendimentoFinalizado === true);
+  check('qualificado', r.saida.qualificado === true);
+  check('advogado notificado', r.notificou === true);
+  check('resumo usa "nao informado"', /nao informado/i.test(r.crm.resumoConversa), r.crm.resumoConversa);
+}
+
 console.log('\n' + '='.repeat(70));
 console.log(falhas === 0 ? 'TODOS OS TESTES PASSARAM ✅' : `${falhas} VERIFICACAO(OES) FALHARAM ❌`);
 console.log('='.repeat(70));

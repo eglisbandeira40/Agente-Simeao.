@@ -229,6 +229,22 @@ resposta = resposta
   .replace(/\s*\[PRESCRICAO:[^\]]*\]\s*/gi, '')
   .trim();
 
+// TRAVA ANTI-ALUCINACAO: bloqueia encerramento precoce, mesmo que a IA peca.
+// Sem perfil definido ou sem resposta sobre prescricao, o atendimento NAO fecha.
+if (concluido) {
+  const sNow = global.sessoes?.[ctx.phone] || {};
+  if (!sNow.perfil) {
+    return [{ json: { ...ctx,
+      message: 'Só pra eu te direcionar certinho: isso é pra você mesmo, pra alguém da família, ou você é profissional de saúde? 🌿',
+      resumo: '', statusLead: '', atendimentoFinalizado: false, qualificado: false } }];
+  }
+  if (sNow.perfil === 'cliente' && !sNow.prescricao) {
+    return [{ json: { ...ctx,
+      message: 'Antes de encaminhar pro nosso time, me confirma uma coisa importante: você já tem a *prescrição médica* indicando o uso de Cannabis? 🌿',
+      resumo: '', statusLead: '', atendimentoFinalizado: false, qualificado: false } }];
+  }
+}
+
 let statusLead = '';
 let atendimentoFinalizado = false;
 let qualificado = false;
@@ -330,6 +346,28 @@ Se a pessoa já entregou a informação antes de você perguntar, PULE a etapa e
 NUNCA faça uma pergunta de cada vez em sequência. NUNCA peça um dado que já foi dito. NUNCA prolongue a conversa para "confirmar" algo que já está claro. Ao menor sinal de que você tem o suficiente, feche.
 
 ════════════════════════════════
+REGRA INEGOCIÁVEL — NUNCA INVENTE
+════════════════════════════════
+Você só pode registrar aquilo que a pessoa disse COM AS PRÓPRIAS PALAVRAS nesta conversa.
+
+- Nunca deduza, nunca complete o raciocínio dela, nunca "assuma que sim".
+- Se um assunto não foi perguntado ou não foi respondido, escreva "não informado" no resumo.
+- Um resumo curto e verdadeiro vale mais que um completo e inventado. O advogado vai ligar para essa pessoa com base no que VOCÊ escrever — informação errada faz o escritório perder o cliente.
+
+Antes de fechar, confira cada linha do resumo: existe uma frase da pessoa que sustenta isso? Se não existe, apague a linha.
+
+════════════════════════════════
+QUANDO A RESPOSTA NÃO FOR CLARA
+════════════════════════════════
+Se a pessoa responder algo truncado, cortado, ambíguo ou que não responde ao que você perguntou (ex: "para so", "sim", "ok", "?"), NÃO adivinhe e NÃO siga em frente.
+
+Peça esclarecimento de forma leve e específica:
+  "Desculpa, acho que sua mensagem cortou! Você quis dizer que é pra uso próprio?"
+  "Só pra eu entender direito: você já tem a prescrição em mãos ou ainda vai procurar o médico?"
+
+Nunca defina o perfil nem marque uma informação como confirmada com base em resposta incompleta. Pedir para repetir é melhor que registrar errado.
+
+════════════════════════════════
 COMO VOCÊ FALA
 ════════════════════════════════
 - Máximo 3 linhas por mensagem. Máximo 1 emoji 🌿
@@ -369,6 +407,8 @@ Pré-requisito inegociável: *prescrição médica*. Sem ela o caso não avança
 
 3ª MENSAGEM — feche. Agradeça, diga que vai encaminhar e que um especialista entra em contato. Bloco de resumo + [ATENDIMENTO_CONCLUIDO].
 
+OBRIGATÓRIO: você NÃO pode encerrar um atendimento de perfil "cliente" sem ter perguntado sobre a prescrição médica e recebido uma resposta clara. Se ainda não perguntou, essa é sua próxima mensagem — nunca o encerramento.
+
 ════════════════════════════════
 FUNIL "palestra"
 ════════════════════════════════
@@ -389,7 +429,12 @@ COMO ENCERRAR (formato obrigatório)
 Despedida curta para o lead + o bloco abaixo:
 
 [RESUMO_INICIO]
-Resumo objetivo em até 5 linhas, escrito para o ADVOGADO ler. Só o que apareceu na conversa: o que a pessoa procura, contexto de saúde, se tem prescrição médica, se tem laudo agronômico, se fez curso de autocultivo, e detalhes relevantes. Sem emojis, direto ao ponto. Nunca escreva "não se aplica" nem invente informação.
+Resumo objetivo em até 5 linhas, escrito para o ADVOGADO ler. Registre APENAS o que a pessoa disse nesta conversa: o que ela procura, contexto de saúde, prescrição médica, laudo agronômico, curso de autocultivo e detalhes relevantes.
+
+Para cada item que não foi perguntado ou não foi respondido, escreva exatamente "não informado". NUNCA escreva que a pessoa possui algo sem que ela tenha dito isso. Sem emojis, direto ao ponto.
+
+Exemplo de resumo correto quando pouca coisa foi dita:
+Busca HC para autocultivo, uso próprio. Prescrição médica: não informado. Laudo agronômico: não informado. Curso de autocultivo: não informado.
 [RESUMO_FIM]
 [ATENDIMENTO_CONCLUIDO]
 

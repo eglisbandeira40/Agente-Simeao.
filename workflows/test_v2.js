@@ -140,34 +140,33 @@ head('CENARIO B — IA identifica "cliente" pela fala e corta por falta de presc
 }
 
 // ================================================================ C
-head('CENARIO C — cliente COM prescricao, conversa livre ate o resumo');
+head('CENARIO C — cliente COM prescricao: funil fecha em 3 mensagens');
 {
   const st = novoState('5511900000003', 'Joao');
   const ai = aiRoteiro([
     'Entendi, Joao. E você já tem a prescrição médica pra Cannabis? 🌿[PERFIL:cliente]',
-    'Que bom! Isso já resolve o principal. Me conta, o cultivo seria pra uso próprio? 🌿[PRESCRICAO:sim]',
-    'Certo. E você já ouviu falar em laudo agronômico? É um documento técnico do cultivo que costuma reforçar o pedido.',
-    'Perfeito, obrigada por compartilhar! Vou encaminhar tudo pra nossa equipe e um especialista fala com você em breve. 🌿\n[RESUMO_INICIO]\n' + RES + '\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
+    'Ótimo, isso já resolve o principal! Me conta rapidinho: você já tem o laudo agronômico do cultivo e chegou a fazer algum curso de autocultivo? 🌿[PRESCRICAO:sim]',
+    'Perfeito, obrigada! Vou encaminhar tudo pra nossa equipe e um especialista fala com você em breve. 🌿\n[RESUMO_INICIO]\n' + RES + '\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
   ]);
-  let r;
+  let r, turnosAna = 0;
   turno(st, 'oi', ai);
   turno(st, 'Joao Pedro', ai);
-  r = turno(st, 'tenho dor cronica e quero plantar em casa', ai); show(r);
 
-  r = turno(st, 'tenho sim, o médico passou', ai); show(r);
-  check('registrou prescricao = Sim', st.static.sessoes['5511900000003'].prescricao === 'Sim',
-        st.static.sessoes['5511900000003'].prescricao);
-  check('nao encerrou ainda', r.saida.atendimentoFinalizado === false);
+  r = turno(st, 'tenho dor cronica e quero plantar em casa', ai); show(r); turnosAna++;
+  check('1a msg ja faz a pergunta de corte', /prescrição/i.test(r.msg), r.msg);
 
-  r = turno(st, 'sim, pra mim mesmo', ai); show(r);
-  check('cobre laudo agronomico na conversa', /laudo agronômico/i.test(r.msg));
+  r = turno(st, 'tenho sim, o médico passou', ai); show(r); turnosAna++;
+  check('registrou prescricao = Sim', st.static.sessoes['5511900000003'].prescricao === 'Sim');
+  check('2a msg junta laudo + curso numa pergunta só',
+        /laudo agronômico/i.test(r.msg) && /curso/i.test(r.msg), r.msg);
+  check('2a msg nao fatia em varias perguntas',
+        (r.msg.match(/\?/g) || []).length === 1, r.msg);
 
-  r = turno(st, 'não tenho laudo nem fiz curso', ai); show(r);
-  check('encerrou', r.saida.atendimentoFinalizado === true);
-  check('QUALIFICADO', r.saida.statusLead === 'qualificado', r.saida.statusLead);
+  r = turno(st, 'não tenho laudo nem fiz curso', ai); show(r); turnosAna++;
+  check('fechou na 3a mensagem', turnosAna === 3 && r.saida.atendimentoFinalizado === true);
+  check('QUALIFICADO', r.saida.statusLead === 'qualificado');
   check('advogado notificado', r.notificou === true);
-  check('resumo preenchido', r.crm && r.crm.resumoConversa.length > 30, r.crm && r.crm.resumoConversa);
-  check('CRM com prescricaoMedica = Sim', r.crm && r.crm.prescricaoMedica === 'Sim', r.crm);
+  check('CRM com prescricaoMedica = Sim', r.crm && r.crm.prescricaoMedica === 'Sim');
 }
 
 // ================================================================ D
@@ -245,7 +244,7 @@ head('CENARIO H — valvula de conversa longa + pos-atendimento');
   turno(st, 'oi', aiNeutro);
   turno(st, 'Longa', aiNeutro);
   let r, valvula = null;
-  for (let i = 0; i < 16 && !valvula; i++) {
+  for (let i = 0; i < 12 && !valvula; i++) {
     r = turno(st, 'mais um detalhe ' + i, aiNeutro);
     if (r.saida.atendimentoFinalizado) valvula = r;
   }

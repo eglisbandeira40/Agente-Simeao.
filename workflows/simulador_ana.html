@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulador — Ana | Simeão Advogados</title>
+<style>
+  :root{
+    --bg:#0f1512; --panel:#18211d; --panel2:#1f2a25; --line:#2c3a33;
+    --tx:#e8f0ea; --tx2:#93a79c;
+    --verde:#25d366; --verde-esc:#075e54; --bolha-ana:#202c26; --bolha-eu:#075e54;
+    --amarelo:#e0b15c; --vermelho:#e06c5c; --azul:#5c9ce0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg);color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;flex-direction:column;height:100vh;overflow:hidden;
+  }
+  code,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+  header{
+    background:var(--panel);border-bottom:1px solid var(--line);
+    padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;flex:none;
+  }
+  header h1{font-size:15px;margin:0;font-weight:700;letter-spacing:-.01em}
+  header .sub{font-size:11.5px;color:var(--tx2)}
+  .cfg{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  input,select,button{font:inherit}
+  input[type=password],input[type=text]{
+    background:var(--panel2);border:1px solid var(--line);color:var(--tx);
+    border-radius:8px;padding:7px 10px;font-size:12.5px;outline:none;
+  }
+  input:focus{border-color:var(--verde)}
+  button{
+    background:var(--panel2);border:1px solid var(--line);color:var(--tx);
+    border-radius:8px;padding:7px 13px;font-size:12.5px;cursor:pointer;
+  }
+  button:hover{border-color:var(--verde)}
+  button.primary{background:var(--verde-esc);border-color:var(--verde-esc);font-weight:600}
+  button:disabled{opacity:.45;cursor:not-allowed}
+
+  main{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+
+  /* ---------- chat ---------- */
+  .chat{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+  .msgs{
+    flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:8px;
+    background:
+      radial-gradient(circle at 20% 15%,rgba(37,211,102,.05),transparent 45%),
+      radial-gradient(circle at 80% 70%,rgba(224,177,92,.04),transparent 45%),
+      var(--bg);
+  }
+  .b{max-width:74%;padding:8px 12px;border-radius:12px;font-size:13.5px;line-height:1.5;
+     white-space:pre-wrap;word-wrap:break-word;position:relative}
+  .b.ana{background:var(--bolha-ana);align-self:flex-start;border-bottom-left-radius:3px}
+  .b.eu{background:var(--bolha-eu);align-self:flex-end;border-bottom-right-radius:3px}
+  .b.sis{align-self:center;background:transparent;border:1px dashed var(--line);
+         color:var(--tx2);font-size:11.5px;max-width:88%;text-align:center}
+  .b b{font-weight:700}
+  .b i{font-style:italic}
+  .hora{font-size:10px;color:var(--tx2);opacity:.7;margin-left:8px}
+
+  .digitando{align-self:flex-start;display:flex;gap:4px;padding:11px 14px;
+             background:var(--bolha-ana);border-radius:12px;border-bottom-left-radius:3px}
+  .digitando i{width:6px;height:6px;border-radius:50%;background:var(--tx2);
+               animation:pulsa 1.3s infinite;display:block}
+  .digitando i:nth-child(2){animation-delay:.2s}
+  .digitando i:nth-child(3){animation-delay:.4s}
+  @keyframes pulsa{0%,60%,100%{opacity:.3}30%{opacity:1}}
+  @media(prefers-reduced-motion:reduce){.digitando i{animation:none;opacity:.6}}
+
+  .entrada{border-top:1px solid var(--line);background:var(--panel);padding:10px 12px;
+           display:flex;gap:8px;flex:none}
+  .entrada input{flex:1;border-radius:20px;padding:10px 15px;font-size:13.5px}
+  .atalhos{display:flex;gap:6px;padding:0 12px 10px;background:var(--panel);flex-wrap:wrap;flex:none}
+  .atalhos button{font-size:11px;padding:4px 10px;border-radius:20px;color:var(--tx2)}
+
+  /* ---------- painel ---------- */
+  .painel{overflow-y:auto;background:var(--panel);padding:16px;display:flex;
+          flex-direction:column;gap:14px}
+  .painel h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;
+             color:var(--tx2);margin:0 0 8px;font-weight:700}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .linha{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;
+         padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+  .linha:last-child{border-bottom:none}
+  .linha span:first-child{color:var(--tx2)}
+  .linha span:last-child{font-weight:600;text-align:right;word-break:break-word}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700}
+  .pill.ok{background:rgba(37,211,102,.15);color:var(--verde)}
+  .pill.no{background:rgba(224,108,92,.15);color:var(--vermelho)}
+  .pill.wait{background:rgba(224,177,92,.15);color:var(--amarelo)}
+  .card.crm{border-color:var(--azul)}
+  .card.adv{border-color:var(--verde)}
+  .card.off{opacity:.4}
+  pre.json{margin:8px 0 0;font-size:11px;line-height:1.5;color:var(--tx2);
+           white-space:pre-wrap;word-break:break-word;max-height:230px;overflow:auto}
+  .aviso{font-size:11.5px;color:var(--amarelo);background:rgba(224,177,92,.09);
+         border:1px solid rgba(224,177,92,.3);border-radius:8px;padding:9px 11px;line-height:1.5}
+  .erro{font-size:11.5px;color:var(--vermelho);background:rgba(224,108,92,.09);
+        border:1px solid rgba(224,108,92,.3);border-radius:8px;padding:9px 11px;line-height:1.5}
+  .log{font-size:11px;color:var(--tx2);line-height:1.7}
+  .log b{color:var(--tx)}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🌿 Simulador — Ana</h1>
+    <div class="sub">roda o código real do workflow v2 · nada é enviado ao n8n</div>
+  </div>
+  <div class="cfg">
+    <input type="password" id="chave" placeholder="sua API key da Anthropic (sk-ant-...)" style="width:270px">
+    <input type="text" id="modelo" style="width:170px">
+    <button id="reiniciar">Reiniciar conversa</button>
+  </div>
+</header>
+
+<main>
+  <section class="chat">
+    <div class="msgs" id="msgs"></div>
+    <div class="atalhos">
+      <button data-t="1">1 · HC autocultivo</button>
+      <button data-t="2">2 · Palestra</button>
+      <button data-t="3">3 · Profissional</button>
+      <button data-t="tenho sim">tenho prescrição</button>
+      <button data-t="não tenho">não tenho prescrição</button>
+      <button data-t="MENU">MENU</button>
+    </div>
+    <form class="entrada" id="form">
+      <input type="text" id="txt" placeholder="Escreva como se fosse o lead no WhatsApp…" autocomplete="off">
+      <button class="primary" type="submit" id="enviar">Enviar</button>
+    </form>
+  </section>
+
+  <aside class="painel">
+    <div id="avisoChave" class="aviso">
+      Cole sua <b>API key da Anthropic</b> no campo acima para a Ana responder de verdade.
+      A chave fica só no seu navegador e vai apenas para <span class="mono">api.anthropic.com</span>.
+      Sem a chave, as etapas fixas (menu, corte de prescrição) ainda funcionam.
+    </div>
+    <div id="erroBox"></div>
+
+    <div>
+      <h2>Estado da sessão</h2>
+      <div class="card" id="estado"></div>
+    </div>
+
+    <div>
+      <h2>Enviar Lead para o CRM (SyncHub)</h2>
+      <div class="card crm off" id="cardCrm">
+        <div style="font-size:12.5px;color:var(--tx2)">Ainda não disparado.</div>
+      </div>
+    </div>
+
+    <div>
+      <h2>Notificar Advogado</h2>
+      <div class="card adv off" id="cardAdv">
+        <div style="font-size:12.5px;color:var(--tx2)">Ainda não disparado.</div>
+      </div>
+    </div>
+
+    <div>
+      <h2>Nodes executados</h2>
+      <div class="card"><div class="log" id="log">—</div></div>
+    </div>
+  </aside>
+</main>
+
+<script>
+const WF = {"code": {"Extrair Dados da Mensagem": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\n\nif (input.statuses?.length || input.status) return [];\nif (!input.messages?.length) return [];\nif (input.field && input.field !== 'messages') return [];\n\nconst contact = input.contacts?.[0] || {};\nconst message = input.messages[0];\nconst phone = contact.wa_id || message.from || '';\nconst pushName = contact.profile?.name || '';\nconst tipoMensagem = message.type || '';\nconst messageId = message.id || '';\nconst timestamp = message.timestamp || '';\n\nif (Math.floor(Date.now() / 1000) - parseInt(timestamp) > 30) return [];\n\nif (!global.messagesProcessadas) global.messagesProcessadas = {};\nconst agoraMs = Date.now();\nif (global.messagesProcessadas[messageId] && (agoraMs - global.messagesProcessadas[messageId]) < 300000) return [];\nglobal.messagesProcessadas[messageId] = agoraMs;\n\nfor (const id in global.messagesProcessadas) {\n  if (agoraMs - global.messagesProcessadas[id] > 600000) delete global.messagesProcessadas[id];\n}\n\nlet textoRecebido = '';\nif (tipoMensagem === 'text') textoRecebido = message.text?.body || '';\nelse if (tipoMensagem === 'button') textoRecebido = message.button?.text || '';\nelse if (tipoMensagem === 'interactive') {\n  textoRecebido = message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || '';\n}\n\nif (!textoRecebido || !phone) return [];\n\nconst deveResetar = ['reiniciar', 'menu', 'recomeçar', 'recomecar', 'reset'].includes(textoRecebido.toLowerCase().trim());\n\nreturn [{ json: { phone, pushName, textoRecebido, tipoMensagem, messageId, timestamp, deveResetar } }];\n", "Buscar Sessao do Usuario": "const input = $input.all()[0].json;\nconst { phone, pushName, textoRecebido } = input;\nconst global = $getWorkflowStaticData('global');\nconst agora = Date.now();\n\nif (!global.sessoes) global.sessoes = {};\n\nif (input.deveResetar || (global.sessoes[phone] && agora - (global.sessoes[phone].ultimaAtividade || 0) > 7200000)) {\n  delete global.sessoes[phone];\n}\n\nif (!global.sessoes[phone]) {\n  global.sessoes[phone] = {\n    etapa: 'inicio', perfil: '', nome: '', servico: '',\n    email: '', telefone: '', crmId: '',\n    prescricao: '', mensagensCount: 0, ultimaAtividade: agora\n  };\n}\n\nconst s = global.sessoes[phone];\ns.mensagensCount = (s.mensagensCount || 0) + 1;\ns.ultimaAtividade = agora;\n\nreturn [{ json: {\n  phone, pushName, textoRecebido, message: textoRecebido,\n  etapa: s.etapa, perfil: s.perfil || '', nome: s.nome || '',\n  servico: s.servico || '', email: s.email || '', telefone: s.telefone || '',\n  crmId: s.crmId || '', prescricao: s.prescricao || '',\n  mensagensCount: s.mensagensCount\n} }];\n", "Montar Boas-vindas": "const { phone, pushName = 'cliente' } = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nglobal.sessoes[phone] = {\n  etapa: 'aguardando_nome', perfil: '', nome: '', servico: '',\n  email: '', telefone: '', crmId: '', prescricao: '',\n  mensagensCount: 1, ultimaAtividade: Date.now()\n};\n\nconst mensagem = `Oi! 🌿 Sou a *Ana*, do *Escritório José Simeão Advocacia*, especializado em *Cannabis Medicinal*.\\n\\nPra começar, como você se chama? 😊`;\n\nreturn [{ json: { phone, pushName, message: mensagem, etapa: 'aguardando_nome' } }];\n", "Salvar Nome e Enviar Menu": "const dados = $('Extrair Dados da Mensagem').item.json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[dados.phone]) global.sessoes[dados.phone] = {};\n\nconst bruto = (dados.textoRecebido || '').trim();\nconst nome = bruto.length >= 2 && bruto.length <= 60 ? bruto : (dados.pushName || 'cliente');\nObject.assign(global.sessoes[dados.phone], { nome, etapa: 'menu', ultimaAtividade: Date.now() });\n\nconst mensagem = `Prazer, *${nome}*! 😊\\n\\nMe conta como posso te ajudar:\\n\\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\\n3️⃣ - Sou *médico, dentista, fisioterapeuta ou veterinário* e desejo uma consultoria\\n\\nÉ só digitar o número 👇`;\n\nreturn [{ json: { phone: dados.phone, pushName: dados.pushName, nome, message: mensagem, etapa: 'menu' } }];\n", "Processar Opcao do Menu": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[input.phone]) global.sessoes[input.phone] = {};\nconst s = global.sessoes[input.phone];\ns.ultimaAtividade = Date.now();\n\nconst opcao = (input.textoRecebido || '').trim()\n  .replace(/1️⃣/g, '1').replace(/2️⃣/g, '2').replace(/3️⃣/g, '3');\n\nconst nome = s.nome || 'tudo bem';\n\nconst opcoes = {\n  '1': {\n    perfil: 'cliente',\n    servico: 'HC para Autocultivo Medicinal',\n    mensagem: `Entendi, *${nome}*. 🌿 Vamos ver como o escritório pode te ajudar com o *HC para autocultivo*.\\n\\nUma coisa importante logo de início: você já tem *prescrição médica* indicando o uso de Cannabis?`\n  },\n  '2': {\n    perfil: 'palestra',\n    servico: 'Palestra sobre Cannabis Medicinal',\n    mensagem: `Que legal, *${nome}*! 🎤 O escritório realiza palestras e treinamentos sobre Cannabis Medicinal e os aspectos jurídicos do tema.\\n\\nMe conta um pouco: é pra qual tipo de público ou instituição?`\n  },\n  '3': {\n    perfil: 'profissional',\n    servico: 'Consultoria para Profissional de Saúde',\n    mensagem: `Ótimo, *${nome}*! 🌿 O escritório oferece consultoria para profissionais de saúde que atuam ou querem atuar com Cannabis Medicinal.\\n\\nMe conta sobre a sua área de atuação e o que você está buscando 👇`\n  }\n};\n\nif (opcoes[opcao]) {\n  const { perfil, servico, mensagem } = opcoes[opcao];\n  Object.assign(s, {\n    perfil, servico, etapa: 'agente_ia',\n    prescricao: '', resumo: '', statusLead: '',\n    perguntouPrescricao: perfil === 'cliente'\n  });\n  return [{ json: { ...input, perfil, servico, message: mensagem, etapa: 'agente_ia' } }];\n}\n\nreturn [{ json: { ...input, message: `Só pra eu te direcionar certinho, digita o *número* da opção:\\n\\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\\n3️⃣ - Sou *médico, dentista, fisioterapeuta ou veterinário* e desejo uma consultoria` } }];\n", "Preparar Contexto para IA": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[input.phone]) global.sessoes[input.phone] = {};\nconst s = global.sessoes[input.phone];\ns.ultimaAtividade = Date.now();\n\nconst mensagemUsuario = (input.textoRecebido || input.message || '').trim();\nconst mensagensCount = s.mensagensCount || 0;\n\nconst emailMatch = mensagemUsuario.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/);\nif (emailMatch && !s.email) s.email = emailMatch[0];\n\nconst telMatch = mensagemUsuario.replace(/\\D/g, '');\nif (!s.telefone && telMatch.length >= 10 && telMatch.length <= 13) s.telefone = telMatch;\n\n// Classificador de alta confianca para a pergunta de prescricao medica.\n// Se ficar ambiguo, devolve '' e a IA continua investigando na conversa.\nfunction classificaPrescricao(txt) {\n  const t = txt.toLowerCase().trim();\n  if (/^(1|sim|s|tenho|ja tenho|já tenho|possuo|tenho sim|sim tenho)$/.test(t)) return 'Sim';\n  if (/^sim\\b/.test(t) && !/\\b(nao|não)\\b/.test(t)) return 'Sim';\n  if (/^(nao|não)\\b/.test(t)) return 'Nao';\n  if (/^(2|nao|não|n|nao tenho|não tenho|ainda nao|ainda não|nao possuo|não possuo)$/.test(t)) return 'Nao';\n  if (/\\b(tenho|possuo|consegui|tenho a receita|com receita|receituario|receituário)\\b/.test(t)\n      && !/\\b(nao|não|ainda nao|ainda não|sem)\\b/.test(t)) return 'Sim';\n  if (/\\b(nao tenho|não tenho|ainda nao|ainda não|sem prescricao|sem prescrição|sem receita|nao possuo|não possuo)\\b/.test(t)) return 'Nao';\n  return '';\n}\n\nif (s.perfil === 'cliente' && s.perguntouPrescricao && !s.prescricao) {\n  const c = classificaPrescricao(mensagemUsuario);\n  if (c) s.prescricao = c;\n}\n\nconst base = {\n  ...input,\n  nome: s.nome || '',\n  perfil: s.perfil || '',\n  servico: s.servico || '',\n  email: s.email || '',\n  telefone: s.telefone || '',\n  crmId: s.crmId || '',\n  prescricao: s.prescricao || '',\n  mensagemUsuario,\n  mensagensCount\n};\n\nconst querAdvogado = ['falar com advogado','quero advogado','falar com humano','atendente','quero uma pessoa']\n  .some(p => mensagemUsuario.toLowerCase().includes(p));\n\nif (querAdvogado) {\n  s.etapa = 'encerrado';\n  s.statusLead = 'qualificado';\n  s.resumo = s.resumo || 'Lead pediu para falar diretamente com um advogado.';\n  return [{ json: { ...base,\n    respostaPronta: `Claro! Já vou avisar nossa equipe e um advogado entra em contato com você por aqui. 🌿`,\n    resumo: s.resumo, statusLead: 'qualificado', atendimentoFinalizado: true, qualificado: true } }];\n}\n\n// Corte deterministico: sem prescricao medica o HC nao avanca.\nif (s.perfil === 'cliente' && s.prescricao === 'Nao') {\n  s.etapa = 'encerrado';\n  s.statusLead = 'nao_qualificado';\n  s.resumo = 'Lead busca HC para autocultivo, mas ainda NAO possui prescricao medica. Orientado a providenciar a prescricao antes de dar entrada no processo.';\n  const msg = `Entendi, *${s.nome || 'tudo bem'}*. 🌿\\n\\nPra entrar com o *HC de autocultivo* o primeiro passo é ter a *prescrição médica* indicando o uso de Cannabis — é ela que sustenta o pedido judicial.\\n\\nO caminho é procurar um *médico prescritor* (muitos atendem por telemedicina) para avaliar seu caso e emitir a prescrição. Com ela em mãos, é só voltar aqui que a gente dá sequência! 💚`;\n  return [{ json: { ...base, prescricao: 'Nao',\n    respostaPronta: msg, resumo: s.resumo,\n    statusLead: 'nao_qualificado', atendimentoFinalizado: true, qualificado: false } }];\n}\n\n// Valvula de seguranca: conversa muito longa vai para o advogado mesmo assim.\nif (mensagensCount >= 14) {\n  s.etapa = 'encerrado';\n  s.statusLead = 'qualificado';\n  s.resumo = s.resumo || 'Conversa longa encerrada automaticamente. Verificar historico com o lead.';\n  return [{ json: { ...base,\n    respostaPronta: `Obrigada pelas informações! ✅ Vou encaminhar tudo pra nossa equipe e um especialista fala com você em breve. 🌿`,\n    resumo: s.resumo, statusLead: 'qualificado', atendimentoFinalizado: true, qualificado: true } }];\n}\n\nreturn [{ json: { ...base, atendimentoFinalizado: false, qualificado: false } }];\n", "Mensagem Pos Atendimento": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nconst s = global.sessoes?.[input.phone] || {};\nconst nome = s.nome || input.pushName || '';\nconst trecho = nome ? `, *${nome}*` : '';\n\nconst msg = s.statusLead === 'nao_qualificado'\n  ? `Fico à disposição${trecho}! 🌿 Assim que você tiver a *prescrição médica* em mãos, é só me chamar aqui que a gente dá sequência.\\n\\nSe quiser recomeçar o atendimento, digite *MENU*.`\n  : `Seu atendimento já está com a nossa equipe${trecho}! 🌿 Um especialista vai falar com você por aqui em breve.\\n\\nSe precisar recomeçar, digite *MENU*.`;\n\nreturn [{ json: { ...input, message: msg, atendimentoFinalizado: false, qualificado: false } }];\n", "Processar Resposta da IA": "const global = $getWorkflowStaticData('global');\nconst ctx = $('Preparar Contexto para IA').item.json;\nconst s = global.sessoes?.[ctx.phone] || {};\n\n// Caminhos deterministicos (corte de prescricao, pedido de advogado, valvula)\nif (ctx.respostaPronta) {\n  return [{ json: {\n    ...ctx,\n    message: ctx.respostaPronta,\n    resumo: ctx.resumo || '',\n    statusLead: ctx.statusLead || '',\n    atendimentoFinalizado: true,\n    qualificado: !!ctx.qualificado\n  } }];\n}\n\nconst agente = $('AI Agent').item.json;\nlet resposta = agente?.output || agente?.text || agente?.content || agente?.response\n  || 'Desculpa, tive um probleminha técnico aqui. Pode repetir? 🌿';\n\nconst semPrescricao = /\\[SEM_PRESCRICAO\\]/i.test(resposta);\nconst concluido = /\\[ATENDIMENTO_CONCLUIDO\\]/i.test(resposta);\n\nconst resumoMatch = resposta.match(/\\[RESUMO_INICIO\\]([\\s\\S]*?)\\[RESUMO_FIM\\]/i);\nconst resumo = resumoMatch ? resumoMatch[1].trim() : (s.resumo || '');\n\nresposta = resposta\n  .replace(/\\[RESUMO_INICIO\\][\\s\\S]*?\\[RESUMO_FIM\\]/gi, '')\n  .replace(/\\s*\\[ATENDIMENTO_CONCLUIDO\\]\\s*/gi, '')\n  .replace(/\\s*\\[SEM_PRESCRICAO\\]\\s*/gi, '')\n  .trim();\n\nlet statusLead = '';\nlet atendimentoFinalizado = false;\nlet qualificado = false;\n\nif (semPrescricao) {\n  statusLead = 'nao_qualificado';\n  atendimentoFinalizado = true;\n  if (global.sessoes?.[ctx.phone]) {\n    global.sessoes[ctx.phone].etapa = 'encerrado';\n    global.sessoes[ctx.phone].prescricao = 'Nao';\n    global.sessoes[ctx.phone].statusLead = statusLead;\n    global.sessoes[ctx.phone].resumo = resumo;\n  }\n} else if (concluido) {\n  statusLead = 'qualificado';\n  atendimentoFinalizado = true;\n  qualificado = true;\n  if (global.sessoes?.[ctx.phone]) {\n    global.sessoes[ctx.phone].etapa = 'encerrado';\n    global.sessoes[ctx.phone].statusLead = statusLead;\n    global.sessoes[ctx.phone].resumo = resumo;\n  }\n}\n\nreturn [{ json: {\n  ...ctx,\n  message: resposta,\n  resumo,\n  statusLead,\n  atendimentoFinalizado,\n  qualificado\n} }];\n", "Montar Payload CRM": "const d = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nconst s = global.sessoes?.[d.phone] || {};\n\nconst payload = {\n  nome: d.nome || s.nome || '',\n  telefone: d.phone || '',\n  telefoneContato: d.telefone || s.telefone || d.phone || '',\n  email: d.email || s.email || '',\n  origem: 'WhatsApp - Ana (Simeao Advogados)',\n  perfil: d.perfil || s.perfil || '',\n  servico: d.servico || s.servico || '',\n  statusLead: d.statusLead || s.statusLead || '',\n  qualificado: !!d.qualificado,\n  prescricaoMedica: d.prescricao || s.prescricao || '',\n  resumoConversa: d.resumo || s.resumo || '',\n  dataAtendimento: new Date().toISOString()\n};\n\nreturn [{ json: { ...d, crmPayload: payload } }];\n"}, "prompt": "Você é a *Ana*, assistente do Escritório José Simeão Advocacia, especializado em Cannabis Medicinal.\n\nSua função é conversar de forma NATURAL e HUMANA com quem chega pelo WhatsApp, entender o caso da pessoa e passar um resumo bem feito para o advogado. Você não é um formulário — você é uma pessoa atenciosa que escuta.\n\nDADOS DO ATENDIMENTO (use, mas nunca liste isso para o lead):\nNome: {{ $('Preparar Contexto para IA').item.json.nome }}\nPerfil: {{ $('Preparar Contexto para IA').item.json.perfil }}\nServiço: {{ $('Preparar Contexto para IA').item.json.servico }}\nWhatsApp: {{ $('Preparar Contexto para IA').item.json.phone }}\nPrescrição médica confirmada: {{ $('Preparar Contexto para IA').item.json.prescricao }}\nMensagem atual: {{ $('Preparar Contexto para IA').item.json.mensagemUsuario }}\n\n════════════════════════════════\nCOMO VOCÊ FALA\n════════════════════════════════\n- Tom caloroso, próximo, brasileiro. Como uma pessoa real conversando, não um robô.\n- Frases curtas. No máximo 3 linhas por mensagem.\n- No máximo 1 emoji por mensagem 🌿\n- NUNCA use listas numeradas de opções (\"1 - Sim / 2 - Não\"). Pergunte de forma natural.\n- Faça UMA pergunta por vez. Deixe a pessoa falar.\n- Reaja ao que a pessoa disse antes de puxar o próximo assunto. Se ela contou algo difícil, acolha.\n- NUNCA dê orientação jurídica, não prometa resultado, não fale de valores/honorários.\n- NUNCA repita a saudação inicial nem pergunte o nome (já temos).\n- Se perguntarem se você é humana ou IA, responda com honestidade em uma linha e siga a conversa.\n\n════════════════════════════════\nPERFIL \"cliente\" (paciente/familiar — HC para autocultivo)\n════════════════════════════════\nA pessoa JÁ FOI PERGUNTADA se tem prescrição médica. Sua primeira mensagem responde a isso.\n\nCASO A — Ela NÃO tem prescrição médica (ou não vai conseguir agora):\nAcolha, explique em linguagem simples que a prescrição médica é a base do pedido de HC, oriente a procurar um médico prescritor (muitos atendem por telemedicina) e convide a voltar quando tiver. Encerre com carinho.\nAo fazer isso, termine sua resposta com a tag [SEM_PRESCRICAO] e o bloco de resumo.\n\nCASO B — Ela TEM prescrição médica:\nÓtimo, o caso avança. Agora converse de verdade para entender a situação. Ao longo da conversa, de forma natural e sem parecer checklist, você precisa descobrir:\n  • a condição de saúde / motivo do uso (sem pedir detalhe médico íntimo)\n  • se ela já tem *laudo agronômico* do cultivo (ou se sabe o que é)\n  • se já fez algum *curso de autocultivo*\n  • qualquer urgência, medo ou situação específica que ela queira contar\nDeixe a pessoa escrever à vontade. Se ela já contou algo, não pergunte de novo.\nQuando tiver um retrato razoável do caso (normalmente em 3 a 5 trocas), agradeça, avise que vai encaminhar para a equipe e encerre com o bloco de resumo + [ATENDIMENTO_CONCLUIDO].\n\n════════════════════════════════\nPERFIL \"palestra\"\n════════════════════════════════\nEntenda: para qual público/instituição, formato desejado, previsão de data e o contato (e-mail ou telefone) para a equipe retornar. Converse naturalmente, sem formulário. Quando tiver o essencial, agradeça e encerre com resumo + [ATENDIMENTO_CONCLUIDO].\n\n════════════════════════════════\nPERFIL \"profissional\"\n════════════════════════════════\nEntenda: qual a profissão, onde atua, com que tipo de paciente, e o que exatamente busca (orientação para prescrever, consultoria para a clínica, dúvida regulatória). Converse naturalmente. Quando tiver o essencial, agradeça e encerre com resumo + [ATENDIMENTO_CONCLUIDO].\n\n════════════════════════════════\nCOMO ENCERRAR (formato obrigatório)\n════════════════════════════════\nAo encerrar, sua resposta deve ser: a mensagem de despedida para o lead, seguida do bloco abaixo.\n\n[RESUMO_INICIO]\nEscreva aqui, em até 5 linhas, um resumo objetivo para o ADVOGADO ler. Cubra apenas o que realmente apareceu na conversa: o que a pessoa procura, situação de saúde/contexto, se tem prescrição médica, se tem laudo agronômico, se fez curso de autocultivo, e qualquer detalhe relevante que ela contou. Sem emojis, sem enfeite, direto ao ponto. Nunca escreva \"não se aplica\" nem invente informação que não foi dita.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]\n\nSe o encerramento for por FALTA DE PRESCRIÇÃO MÉDICA, troque a tag final [ATENDIMENTO_CONCLUIDO] por [SEM_PRESCRICAO].\n\nAs tags são removidas antes de chegar ao lead — servem só para a equipe interna. Nunca use tag em mensagem que não seja de encerramento.", "modelo": "claude-sonnet-4-6", "janela": 12};
+
+/* ================= runtime que imita o n8n ================= */
+let estatico = {};
+let saidas = {};
+let historico = [];   // memoria do chat (equivale ao Postgres Chat Memory)
+let trilha = [];
+
+function runCode(nome, inputJson){
+  const src = WF.code[nome];
+  if(!src) throw new Error('Code node inexistente: '+nome);
+  const $getWorkflowStaticData = () => estatico;
+  const $input = { all: () => [{ json: inputJson }] };
+  const $ = (n) => {
+    if(!(n in saidas)) throw new Error('Node "'+n+'" nao executou nesta rodada');
+    return { item: { json: saidas[n] } };
+  };
+  const fn = new Function('$getWorkflowStaticData','$input','$', src);
+  const out = fn($getWorkflowStaticData,$input,$);
+  trilha.push(nome);
+  return (out && out.length) ? out[0].json : null;
+}
+
+function rota(etapa){
+  if(etapa==='inicio') return 'Montar Boas-vindas';
+  if(etapa==='aguardando_nome') return 'Salvar Nome e Enviar Menu';
+  if(etapa==='menu') return 'Processar Opcao do Menu';
+  if(etapa==='agente_ia') return 'Preparar Contexto para IA';
+  if(etapa==='encerrado') return 'Mensagem Pos Atendimento';
+  return 'Montar Boas-vindas';
+}
+
+/* interpola as expressoes n8n do prompt com os valores reais do contexto */
+function montaPrompt(ctx){
+  return WF.prompt.replace(
+    /\{\{\s*\$\('Preparar Contexto para IA'\)\.item\.json\.(\w+)\s*\}\}/g,
+    (_,campo) => (ctx[campo] ?? '')
+  );
+}
+
+async function chamaIA(ctx){
+  const chave = document.getElementById('chave').value.trim();
+  if(!chave){
+    return 'Certo, me conta um pouco mais? 🌿\n\n(sem API key — resposta simulada)';
+  }
+  const modelo = document.getElementById('modelo').value.trim() || WF.modelo;
+  const msgs = historico.slice(-WF.janela*2).concat([{role:'user',content:ctx.mensagemUsuario}]);
+
+  const r = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'content-type':'application/json',
+      'x-api-key':chave,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:modelo, max_tokens:1024,
+      system:montaPrompt(ctx),
+      messages:msgs
+    })
+  });
+  if(!r.ok){
+    const t = await r.text();
+    throw new Error('API '+r.status+': '+t.slice(0,300));
+  }
+  const d = await r.json();
+  return (d.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('').trim();
+}
+
+/* ================= um turno completo ================= */
+async function turno(texto){
+  saidas = {}; trilha = [];
+  const agora = Math.floor(Date.now()/1000);
+  const gatilho = {
+    contacts:[{wa_id:'5511999999999',profile:{name:'Lead Teste'}}],
+    messages:[{from:'5511999999999',id:'wamid.'+Math.random(),type:'text',
+               timestamp:String(agora),text:{body:texto}}]
+  };
+
+  const ext = runCode('Extrair Dados da Mensagem', gatilho);
+  if(!ext) return {ignorado:true};
+  saidas['Extrair Dados da Mensagem'] = ext;
+
+  const ses = runCode('Buscar Sessao do Usuario', ext);
+  saidas['Buscar Sessao do Usuario'] = ses;
+
+  const alvo = rota(ses.etapa);
+  let out;
+
+  if(alvo==='Preparar Contexto para IA'){
+    const ctx = runCode('Preparar Contexto para IA', ses);
+    saidas['Preparar Contexto para IA'] = ctx;
+
+    if(ctx.respostaPronta){
+      saidas['AI Agent'] = {output:''};
+      trilha.push('(corte deterministico — IA nao chamada)');
+    }else{
+      const bruta = await chamaIA(ctx);
+      saidas['AI Agent'] = {output:bruta};
+      historico.push({role:'user',content:ctx.mensagemUsuario});
+      historico.push({role:'assistant',content:bruta});
+      trilha.push('AI Agent');
+    }
+    out = runCode('Processar Resposta da IA', ctx);
+    saidas['Processar Resposta da IA'] = out;
+  }else{
+    out = runCode(alvo, ses);
+    saidas[alvo] = out;
+  }
+
+  let crm=null, advogado=false;
+  if(out.atendimentoFinalizado){
+    saidas['Processar Resposta da IA'] = out;
+    const p = runCode('Montar Payload CRM', out);
+    crm = p.crmPayload;
+    advogado = !!out.qualificado;
+    trilha.push('Enviar Lead para o CRM');
+    if(advogado) trilha.push('Notificar Advogado');
+  }
+  return {out, crm, advogado};
+}
+
+/* ================= interface ================= */
+const $msgs=document.getElementById('msgs');
+const $log=document.getElementById('log');
+const $estado=document.getElementById('estado');
+const $erro=document.getElementById('erroBox');
+
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function wa(s){ // *negrito* e _italico_ do WhatsApp
+  return esc(s).replace(/\*([^*\n]+)\*/g,'<b>$1</b>').replace(/_([^_\n]+)_/g,'<i>$1</i>');
+}
+function hora(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+
+function bolha(txt,quem){
+  const d=document.createElement('div');
+  d.className='b '+quem;
+  d.innerHTML = quem==='sis' ? esc(txt) : wa(txt)+'<span class="hora">'+hora()+'</span>';
+  $msgs.appendChild(d); $msgs.scrollTop=$msgs.scrollHeight;
+}
+function digitando(on){
+  let d=document.getElementById('dig');
+  if(on&&!d){
+    d=document.createElement('div');d.id='dig';d.className='digitando';
+    d.innerHTML='<i></i><i></i><i></i>';
+    $msgs.appendChild(d);$msgs.scrollTop=$msgs.scrollHeight;
+  }else if(!on&&d) d.remove();
+}
+
+function pintaEstado(){
+  const s = (estatico.sessoes||{})['5511999999999'] || {};
+  const p = s.prescricao ? (s.prescricao==='Sim'
+        ? '<span class="pill ok">Sim</span>' : '<span class="pill no">Não</span>')
+      : '<span class="pill wait">—</span>';
+  const st = s.statusLead==='qualificado' ? '<span class="pill ok">qualificado</span>'
+      : s.statusLead==='nao_qualificado' ? '<span class="pill no">não qualificado</span>'
+      : '<span class="pill wait">em andamento</span>';
+  $estado.innerHTML =
+    '<div class="linha"><span>etapa</span><span class="mono">'+esc(s.etapa||'inicio')+'</span></div>'+
+    '<div class="linha"><span>nome</span><span>'+esc(s.nome||'—')+'</span></div>'+
+    '<div class="linha"><span>perfil</span><span class="mono">'+esc(s.perfil||'—')+'</span></div>'+
+    '<div class="linha"><span>serviço</span><span>'+esc(s.servico||'—')+'</span></div>'+
+    '<div class="linha"><span>prescrição médica</span><span>'+p+'</span></div>'+
+    '<div class="linha"><span>status do lead</span><span>'+st+'</span></div>'+
+    '<div class="linha"><span>mensagens</span><span>'+(s.mensagensCount||0)+'</span></div>';
+}
+
+function pintaCrm(crm){
+  const c=document.getElementById('cardCrm');
+  if(!crm){c.className='card crm off';c.innerHTML='<div style="font-size:12.5px;color:var(--tx2)">Ainda não disparado.</div>';return;}
+  c.className='card crm';
+  c.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:6px">✓ POST enviado</div>'+
+    '<pre class="json">'+esc(JSON.stringify(crm,null,2))+'</pre>';
+}
+function pintaAdv(on,out){
+  const c=document.getElementById('cardAdv');
+  if(!on){c.className='card adv off';c.innerHTML='<div style="font-size:12.5px;color:var(--tx2)">Ainda não disparado.</div>';return;}
+  c.className='card adv';
+  const txt='🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\n'+
+    'Nome: '+(out.nome||'Nao informado')+'\n'+
+    'WhatsApp: '+(out.phone||'Nao informado')+'\n'+
+    'Servico: '+(out.servico||'Nao informado')+'\n\n'+
+    '📋 *Resumo da conversa:*\n'+(out.resumo||'Sem resumo registrado')+'\n\n'+
+    '⚠️ *Entrar em contato o quanto antes!*';
+  c.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--verde);margin-bottom:6px">✓ WhatsApp para (11) 94132-1970</div>'+
+    '<pre class="json">'+esc(txt)+'</pre>';
+}
+
+let ocupado=false;
+async function enviar(texto){
+  if(ocupado||!texto.trim()) return;
+  ocupado=true; document.getElementById('enviar').disabled=true;
+  $erro.innerHTML='';
+  bolha(texto,'eu');
+  digitando(true);
+  try{
+    const r = await turno(texto);
+    digitando(false);
+    if(r.ignorado){ bolha('(mensagem ignorada pelo filtro do node Extrair Dados)','sis'); }
+    else{
+      bolha(r.out.message,'ana');
+      pintaCrm(r.crm);
+      pintaAdv(r.advogado, r.out);
+      if(r.out.atendimentoFinalizado){
+        bolha(r.advogado
+          ? '● atendimento encerrado — lead QUALIFICADO → CRM + advogado'
+          : '● atendimento encerrado — lead NÃO qualificado → só CRM','sis');
+      }
+    }
+    $log.innerHTML = trilha.map(t=>'<b>›</b> '+esc(t)).join('<br>');
+  }catch(e){
+    digitando(false);
+    $erro.innerHTML='<div class="erro"><b>Erro:</b> '+esc(e.message)+'</div>';
+  }
+  pintaEstado();
+  ocupado=false; document.getElementById('enviar').disabled=false;
+  document.getElementById('txt').focus();
+}
+
+document.getElementById('form').addEventListener('submit',e=>{
+  e.preventDefault();
+  const i=document.getElementById('txt');
+  const v=i.value; i.value='';
+  enviar(v);
+});
+document.querySelectorAll('.atalhos button').forEach(b=>{
+  b.addEventListener('click',()=>enviar(b.dataset.t));
+});
+document.getElementById('reiniciar').addEventListener('click',()=>{
+  estatico={};saidas={};historico=[];trilha=[];
+  $msgs.innerHTML='';$log.textContent='—';$erro.innerHTML='';
+  pintaCrm(null);pintaAdv(false,{});pintaEstado();
+  bolha('Conversa reiniciada. Mande qualquer mensagem para a Ana começar.','sis');
+});
+document.getElementById('chave').addEventListener('input',e=>{
+  document.getElementById('avisoChave').style.display = e.target.value.trim()?'none':'block';
+});
+
+document.getElementById('modelo').value = WF.modelo;
+pintaEstado();
+bolha('Mande qualquer mensagem (ex.: "oi") para a Ana iniciar o atendimento.','sis');
+</script>
+</body>
+</html>

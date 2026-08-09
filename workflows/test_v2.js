@@ -353,6 +353,38 @@ head('CENARIO M — TRAVA libera quando os dados obrigatorios existem');
   check('resumo usa "nao informado"', /nao informado/i.test(r.crm.resumoConversa), r.crm.resumoConversa);
 }
 
+// ================================================================ N
+head('CENARIO N — nao repete saudacao nem se reapresenta');
+{
+  const casos = [
+    ['Olá, Eglis! Aqui é a Ana, do Escritório José Simeão — fico feliz em te ajudar 🌿\n\nMe conta rapidinho: é pra você ou pra alguém da família?',
+     'saudacao + apresentacao completa'],
+    ['Oi Eglis! Sou a Ana do escritório. Como posso ajudar?', 'oi + sou a ana'],
+    ['Aqui é a Ana. Me conta mais sobre o caso?', 'apresentacao sem saudacao'],
+  ];
+  for (const [bruta, desc] of casos) {
+    const tel = '55119' + Math.random().toString().slice(2, 10);
+    const st = novoState(tel, 'T');
+    const ai = aiRoteiro([bruta]);
+    turno(st, 'oi', ai);
+    turno(st, 'Eglis', ai);
+    const r = turno(st, 'quero saber como funciona', ai);
+    check(`limpa "${desc}"`, !/aqui [eé] a ana|sou a ana/i.test(r.msg), r.msg);
+  }
+}
+
+// ================================================================ O
+head('CENARIO O — quem entra em contato e o Dr. Jose Simeao');
+{
+  const st = novoState('5511900000014', 'Pedro');
+  turno(st, 'oi', aiNeutro);
+  turno(st, 'Pedro', aiNeutro);
+  const r = turno(st, 'quero falar com advogado', aiNeutro); show(r);
+  check('cita Dr. José Simeão', /Dr\. José Simeão/.test(r.msg), r.msg);
+  check('nao diz "especialista"', !/especialista/i.test(r.msg), r.msg);
+  check('nao diz "nossa equipe"', !/nossa equipe/i.test(r.msg), r.msg);
+}
+
 console.log('\n' + '='.repeat(70));
 console.log(falhas === 0 ? 'TODOS OS TESTES PASSARAM ✅' : `${falhas} VERIFICACAO(OES) FALHARAM ❌`);
 console.log('='.repeat(70));

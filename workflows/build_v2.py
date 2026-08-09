@@ -148,7 +148,7 @@ if (querAdvogado) {
   s.statusLead = 'qualificado';
   s.resumo = s.resumo || 'Lead pediu para falar diretamente com um advogado.';
   return [{ json: { ...base,
-    respostaPronta: `Claro! Já vou avisar nossa equipe e um advogado entra em contato com você por aqui. 🌿`,
+    respostaPronta: `Claro! Já avisei o *Dr. José Simeão* e ele entra em contato com você por aqui. 🌿`,
     resumo: s.resumo, statusLead: 'qualificado', atendimentoFinalizado: true, qualificado: true } }];
 }
 
@@ -169,7 +169,7 @@ if (mensagensCount >= 10) {
   s.statusLead = 'qualificado';
   s.resumo = s.resumo || 'Conversa longa encerrada automaticamente. Verificar historico com o lead.';
   return [{ json: { ...base,
-    respostaPronta: `Obrigada pelas informações! ✅ Vou encaminhar tudo pra nossa equipe e um especialista fala com você em breve. 🌿`,
+    respostaPronta: `Obrigada pelas informações! ✅ Já encaminhei pro *Dr. José Simeão* e ele fala com você em breve. 🌿`,
     resumo: s.resumo, statusLead: 'qualificado', atendimentoFinalizado: true, qualificado: true } }];
 }
 
@@ -221,6 +221,18 @@ if (mPresc && global.sessoes?.[ctx.phone]) {
 const resumoMatch = resposta.match(/\[RESUMO_INICIO\]([\s\S]*?)\[RESUMO_FIM\]/i);
 const resumo = resumoMatch ? resumoMatch[1].trim() : (s.resumo || '');
 
+// Guarda: a saudacao inicial vem de um Code node e nao entra na memoria da IA,
+// entao ela as vezes cumprimenta e se apresenta de novo. Remove os dois.
+function semReapresentacao(t) {
+  let x = t;
+  x = x.replace(/^\s*(ol[aá]|oi|bom dia|boa tarde|boa noite)\b[^\n]{0,50}?[!.,]\s*/i, '');
+  x = x.replace(/^\s*(ol[aá]|oi|bom dia|boa tarde|boa noite)\b[\s,!]*/i, '');
+  x = x.replace(/\b(aqui [eé] a ana|sou a ana|quem fala [eé] a ana)\b[^.!?\n]*[.!?]?\s*/gi, '');
+  return x.trim();
+}
+const respLimpa = semReapresentacao(resposta);
+if (respLimpa.length > 10) resposta = respLimpa;
+
 resposta = resposta
   .replace(/\[RESUMO_INICIO\][\s\S]*?\[RESUMO_FIM\]/gi, '')
   .replace(/\s*\[ATENDIMENTO_CONCLUIDO\]\s*/gi, '')
@@ -240,7 +252,7 @@ if (concluido) {
   }
   if (sNow.perfil === 'cliente' && !sNow.prescricao) {
     return [{ json: { ...ctx,
-      message: 'Antes de encaminhar pro nosso time, me confirma uma coisa importante: você já tem a *prescrição médica* indicando o uso de Cannabis? 🌿',
+      message: 'Antes de encaminhar pro Dr. José Simeão, me confirma uma coisa importante: você já tem a *prescrição médica* indicando o uso de Cannabis? 🌿',
       resumo: '', statusLead: '', atendimentoFinalizado: false, qualificado: false } }];
   }
 }
@@ -292,7 +304,7 @@ const trecho = nome ? `, *${nome}*` : '';
 
 const msg = s.statusLead === 'nao_qualificado'
   ? `Fico à disposição${trecho}! 🌿 Assim que você tiver a *prescrição médica* em mãos, é só me chamar aqui que a gente dá sequência.\n\nSe quiser recomeçar o atendimento, digite *MENU*.`
-  : `Seu atendimento já está com a nossa equipe${trecho}! 🌿 Um especialista vai falar com você por aqui em breve.\n\nSe precisar recomeçar, digite *MENU*.`;
+  : `Seu atendimento já está com o *Dr. José Simeão*${trecho}! 🌿 Ele vai falar com você por aqui em breve.\n\nSe precisar recomeçar, digite *MENU*.`;
 
 return [{ json: { ...input, message: msg, atendimentoFinalizado: false, qualificado: false } }];
 """
@@ -344,6 +356,22 @@ Você tem no máximo *3 mensagens* para conduzir do início ao encaminhamento:
 Se a pessoa já entregou a informação antes de você perguntar, PULE a etapa e vá direto para a próxima. Fechar em 2 mensagens é melhor que em 3.
 
 NUNCA faça uma pergunta de cada vez em sequência. NUNCA peça um dado que já foi dito. NUNCA prolongue a conversa para "confirmar" algo que já está claro. Ao menor sinal de que você tem o suficiente, feche.
+
+════════════════════════════════
+O QUE JÁ ACONTECEU (nunca repita)
+════════════════════════════════
+Esta conversa NÃO está começando agora. Antes de você entrar, já aconteceu:
+  1. A pessoa foi cumprimentada e você já se apresentou como Ana, do escritório.
+  2. Você já perguntou o nome dela e ela já respondeu.
+  3. Você já perguntou o que a trouxe até aqui.
+
+Sua mensagem é a CONTINUAÇÃO dessa conversa. Portanto:
+- NUNCA comece com saudação ("Olá", "Oi", "Bom dia", "Seja bem-vindo").
+- NUNCA se apresente de novo ("Aqui é a Ana", "Sou a Ana", "do Escritório José Simeão").
+- NUNCA pergunte o nome — você já sabe, está no contexto acima.
+- Comece direto reagindo ao que a pessoa acabou de dizer.
+
+Quem entra em contato depois é o *Dr. José Simeão*. Chame-o sempre assim — nunca de "especialista", "nossa equipe" ou "Simeão Advogados".
 
 ════════════════════════════════
 REGRA INEGOCIÁVEL — NUNCA INVENTE
@@ -405,7 +433,7 @@ Pré-requisito inegociável: *prescrição médica*. Sem ela o caso não avança
   Ex: "Ótimo, isso já resolve o principal! Me conta rapidinho: você já tem o laudo agronômico do cultivo e chegou a fazer algum curso de autocultivo?"
   Se ela não souber o que é laudo agronômico, explique em uma linha na mensagem seguinte e já feche.
 
-3ª MENSAGEM — feche. Agradeça, diga que vai encaminhar e que um especialista entra em contato. Bloco de resumo + [ATENDIMENTO_CONCLUIDO].
+3ª MENSAGEM — feche. Agradeça e diga que o *Dr. José Simeão* entra em contato. Bloco de resumo + [ATENDIMENTO_CONCLUIDO].
 
 OBRIGATÓRIO: você NÃO pode encerrar um atendimento de perfil "cliente" sem ter perguntado sobre a prescrição médica e recebido uma resposta clara. Se ainda não perguntou, essa é sua próxima mensagem — nunca o encerramento.
 

@@ -23,8 +23,24 @@ modelo = next(n for n in wf["nodes"] if n["type"].endswith("lmChatAnthropic")
 mem = next(n for n in wf["nodes"] if n["type"].endswith("memoryPostgresChat"))
 janela = mem["parameters"].get("contextWindowLength", 12)
 
+sw = next(n for n in wf["nodes"] if n["type"] == "n8n-nodes-base.switch")
+etapas = [r["outputKey"] for r in sw["parameters"]["rules"]["values"]]
+saidas = wf["connections"][sw["name"]]["main"]
+
+rotas = {}
+for i, et in enumerate(etapas):
+    if i < len(saidas) and saidas[i]:
+        rotas[et] = saidas[i][0]["node"]
+
+rota_fallback = saidas[len(etapas)][0]["node"] if len(saidas) > len(etapas) and saidas[len(etapas)] else "Montar Boas-vindas"
+
+faltando = [n for n in list(rotas.values()) + [rota_fallback] if n not in code]
+if faltando:
+    raise SystemExit("Rota aponta para node que nao e Code node: " + ", ".join(faltando))
+
 DADOS = json.dumps({"code": code, "prompt": prompt,
-                    "modelo": modelo, "janela": janela}, ensure_ascii=False)
+                    "modelo": modelo, "janela": janela,
+                    "rotas": rotas, "rotaFallback": rota_fallback}, ensure_ascii=False)
 
 HTML = """<!doctype html>
 <html lang="pt-BR">
@@ -225,12 +241,7 @@ function runCode(nome, inputJson){
 }
 
 function rota(etapa){
-  if(etapa==='inicio') return 'Montar Boas-vindas';
-  if(etapa==='aguardando_nome') return 'Salvar Nome e Enviar Menu';
-  if(etapa==='menu') return 'Processar Opcao do Menu';
-  if(etapa==='agente_ia') return 'Preparar Contexto para IA';
-  if(etapa==='encerrado') return 'Mensagem Pos Atendimento';
-  return 'Montar Boas-vindas';
+  return WF.rotas[etapa] || WF.rotaFallback;
 }
 
 /* interpola as expressoes n8n do prompt com os valores reais do contexto */
@@ -454,5 +465,6 @@ with open(OUT, "w", encoding="utf-8") as f:
 
 print("OK ->", OUT)
 print("code nodes embutidos:", len(code))
+print("rotas:", rotas, "| fallback:", rota_fallback)
 print("modelo:", modelo, "| janela de memoria:", janela)
 print("tamanho:", round(len(html) / 1024, 1), "KB")

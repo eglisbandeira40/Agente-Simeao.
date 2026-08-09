@@ -1,0 +1,729 @@
+{
+  "name": "Agente Juridico Cannabis - v2 Humanizado (SyncHub)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2200,
+        0
+      ],
+      "id": "v2-trigger-0001",
+      "name": "WhatsApp Trigger",
+      "webhookId": "b2f1c9d0-1111-4a2b-9c3d-000000000001",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "bJFFW3HPG0uqmxel",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\n\nif (input.statuses?.length || input.status) return [];\nif (!input.messages?.length) return [];\nif (input.field && input.field !== 'messages') return [];\n\nconst contact = input.contacts?.[0] || {};\nconst message = input.messages[0];\nconst phone = contact.wa_id || message.from || '';\nconst pushName = contact.profile?.name || '';\nconst tipoMensagem = message.type || '';\nconst messageId = message.id || '';\nconst timestamp = message.timestamp || '';\n\nif (Math.floor(Date.now() / 1000) - parseInt(timestamp) > 30) return [];\n\nif (!global.messagesProcessadas) global.messagesProcessadas = {};\nconst agoraMs = Date.now();\nif (global.messagesProcessadas[messageId] && (agoraMs - global.messagesProcessadas[messageId]) < 300000) return [];\nglobal.messagesProcessadas[messageId] = agoraMs;\n\nfor (const id in global.messagesProcessadas) {\n  if (agoraMs - global.messagesProcessadas[id] > 600000) delete global.messagesProcessadas[id];\n}\n\nlet textoRecebido = '';\nif (tipoMensagem === 'text') textoRecebido = message.text?.body || '';\nelse if (tipoMensagem === 'button') textoRecebido = message.button?.text || '';\nelse if (tipoMensagem === 'interactive') {\n  textoRecebido = message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || '';\n}\n\nif (!textoRecebido || !phone) return [];\n\nconst deveResetar = ['reiniciar', 'menu', 'recomeçar', 'recomecar', 'reset'].includes(textoRecebido.toLowerCase().trim());\n\nreturn [{ json: { phone, pushName, textoRecebido, tipoMensagem, messageId, timestamp, deveResetar } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1980,
+        0
+      ],
+      "id": "v2-extrair-0002",
+      "name": "Extrair Dados da Mensagem"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json;\nconst { phone, pushName, textoRecebido } = input;\nconst global = $getWorkflowStaticData('global');\nconst agora = Date.now();\n\nif (!global.sessoes) global.sessoes = {};\n\nif (input.deveResetar || (global.sessoes[phone] && agora - (global.sessoes[phone].ultimaAtividade || 0) > 7200000)) {\n  delete global.sessoes[phone];\n}\n\nif (!global.sessoes[phone]) {\n  global.sessoes[phone] = {\n    etapa: 'inicio', perfil: '', nome: '', servico: '',\n    email: '', telefone: '', crmId: '',\n    prescricao: '', mensagensCount: 0, ultimaAtividade: agora\n  };\n}\n\nconst s = global.sessoes[phone];\ns.mensagensCount = (s.mensagensCount || 0) + 1;\ns.ultimaAtividade = agora;\n\nreturn [{ json: {\n  phone, pushName, textoRecebido, message: textoRecebido,\n  etapa: s.etapa, perfil: s.perfil || '', nome: s.nome || '',\n  servico: s.servico || '', email: s.email || '', telefone: s.telefone || '',\n  crmId: s.crmId || '', prescricao: s.prescricao || '',\n  mensagensCount: s.mensagensCount\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1760,
+        0
+      ],
+      "id": "v2-sessao-0003",
+      "name": "Buscar Sessao do Usuario"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "r1",
+                    "leftValue": "={{ $json.etapa }}",
+                    "rightValue": "inicio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "inicio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "r2",
+                    "leftValue": "={{ $json.etapa }}",
+                    "rightValue": "aguardando_nome",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "aguardando_nome"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "r3",
+                    "leftValue": "={{ $json.etapa }}",
+                    "rightValue": "menu",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "menu"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "r4",
+                    "leftValue": "={{ $json.etapa }}",
+                    "rightValue": "agente_ia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "agente_ia"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "r5",
+                    "leftValue": "={{ $json.etapa }}",
+                    "rightValue": "encerrado",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "encerrado"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1540,
+        0
+      ],
+      "id": "v2-switch-0004",
+      "name": "Verificar Etapa da Conversa"
+    },
+    {
+      "parameters": {
+        "jsCode": "const { phone, pushName = 'cliente' } = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nglobal.sessoes[phone] = {\n  etapa: 'aguardando_nome', perfil: '', nome: '', servico: '',\n  email: '', telefone: '', crmId: '', prescricao: '',\n  mensagensCount: 1, ultimaAtividade: Date.now()\n};\n\nconst mensagem = `Oi! 🌿 Sou a *Ana*, do *Escritório José Simeão Advocacia*, especializado em *Cannabis Medicinal*.\\n\\nPra começar, como você se chama? 😊`;\n\nreturn [{ json: { phone, pushName, message: mensagem, etapa: 'aguardando_nome' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1300,
+        -320
+      ],
+      "id": "v2-boasvindas-0005",
+      "name": "Montar Boas-vindas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $('Extrair Dados da Mensagem').item.json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[dados.phone]) global.sessoes[dados.phone] = {};\n\nconst bruto = (dados.textoRecebido || '').trim();\nconst nome = bruto.length >= 2 && bruto.length <= 60 ? bruto : (dados.pushName || 'cliente');\nObject.assign(global.sessoes[dados.phone], { nome, etapa: 'menu', ultimaAtividade: Date.now() });\n\nconst mensagem = `Prazer, *${nome}*! 😊\\n\\nMe conta como posso te ajudar:\\n\\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\\n3️⃣ - Sou *médico, dentista, fisioterapeuta ou veterinário* e desejo uma consultoria\\n\\nÉ só digitar o número 👇`;\n\nreturn [{ json: { phone: dados.phone, pushName: dados.pushName, nome, message: mensagem, etapa: 'menu' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1300,
+        -140
+      ],
+      "id": "v2-nomemenu-0006",
+      "name": "Salvar Nome e Enviar Menu"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[input.phone]) global.sessoes[input.phone] = {};\nconst s = global.sessoes[input.phone];\ns.ultimaAtividade = Date.now();\n\nconst opcao = (input.textoRecebido || '').trim()\n  .replace(/1️⃣/g, '1').replace(/2️⃣/g, '2').replace(/3️⃣/g, '3');\n\nconst nome = s.nome || 'tudo bem';\n\nconst opcoes = {\n  '1': {\n    perfil: 'cliente',\n    servico: 'HC para Autocultivo Medicinal',\n    mensagem: `Entendi, *${nome}*. 🌿 Vamos ver como o escritório pode te ajudar com o *HC para autocultivo*.\\n\\nUma coisa importante logo de início: você já tem *prescrição médica* indicando o uso de Cannabis?`\n  },\n  '2': {\n    perfil: 'palestra',\n    servico: 'Palestra sobre Cannabis Medicinal',\n    mensagem: `Que legal, *${nome}*! 🎤 O escritório realiza palestras e treinamentos sobre Cannabis Medicinal e os aspectos jurídicos do tema.\\n\\nMe conta um pouco: é pra qual tipo de público ou instituição?`\n  },\n  '3': {\n    perfil: 'profissional',\n    servico: 'Consultoria para Profissional de Saúde',\n    mensagem: `Ótimo, *${nome}*! 🌿 O escritório oferece consultoria para profissionais de saúde que atuam ou querem atuar com Cannabis Medicinal.\\n\\nMe conta sobre a sua área de atuação e o que você está buscando 👇`\n  }\n};\n\nif (opcoes[opcao]) {\n  const { perfil, servico, mensagem } = opcoes[opcao];\n  Object.assign(s, {\n    perfil, servico, etapa: 'agente_ia',\n    prescricao: '', resumo: '', statusLead: '',\n    perguntouPrescricao: perfil === 'cliente'\n  });\n  return [{ json: { ...input, perfil, servico, message: mensagem, etapa: 'agente_ia' } }];\n}\n\nreturn [{ json: { ...input, message: `Só pra eu te direcionar certinho, digita o *número* da opção:\\n\\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\\n3️⃣ - Sou *médico, dentista, fisioterapeuta ou veterinário* e desejo uma consultoria` } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1300,
+        40
+      ],
+      "id": "v2-menu-0007",
+      "name": "Processar Opcao do Menu"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nif (!global.sessoes) global.sessoes = {};\nif (!global.sessoes[input.phone]) global.sessoes[input.phone] = {};\nconst s = global.sessoes[input.phone];\ns.ultimaAtividade = Date.now();\n\nconst mensagemUsuario = (input.textoRecebido || input.message || '').trim();\nconst mensagensCount = s.mensagensCount || 0;\n\nconst emailMatch = mensagemUsuario.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/);\nif (emailMatch && !s.email) s.email = emailMatch[0];\n\nconst telMatch = mensagemUsuario.replace(/\\D/g, '');\nif (!s.telefone && telMatch.length >= 10 && telMatch.length <= 13) s.telefone = telMatch;\n\n// Classificador de alta confianca para a pergunta de prescricao medica.\n// Se ficar ambiguo, devolve '' e a IA continua investigando na conversa.\nfunction classificaPrescricao(txt) {\n  const t = txt.toLowerCase().trim();\n  if (/^(1|sim|s|tenho|ja tenho|já tenho|possuo|tenho sim|sim tenho)$/.test(t)) return 'Sim';\n  if (/^sim\\b/.test(t) && !/\\b(nao|não)\\b/.test(t)) return 'Sim';\n  if (/^(nao|não)\\b/.test(t)) return 'Nao';\n  if (/^(2|nao|não|n|nao tenho|não tenho|ainda nao|ainda não|nao possuo|não possuo)$/.test(t)) return 'Nao';\n  if (/\\b(tenho|possuo|consegui|tenho a receita|com receita|receituario|receituário)\\b/.test(t)\n      && !/\\b(nao|não|ainda nao|ainda não|sem)\\b/.test(t)) return 'Sim';\n  if (/\\b(nao tenho|não tenho|ainda nao|ainda não|sem prescricao|sem prescrição|sem receita|nao possuo|não possuo)\\b/.test(t)) return 'Nao';\n  return '';\n}\n\nif (s.perfil === 'cliente' && s.perguntouPrescricao && !s.prescricao) {\n  const c = classificaPrescricao(mensagemUsuario);\n  if (c) s.prescricao = c;\n}\n\nconst base = {\n  ...input,\n  nome: s.nome || '',\n  perfil: s.perfil || '',\n  servico: s.servico || '',\n  email: s.email || '',\n  telefone: s.telefone || '',\n  crmId: s.crmId || '',\n  prescricao: s.prescricao || '',\n  mensagemUsuario,\n  mensagensCount\n};\n\nconst querAdvogado = ['falar com advogado','quero advogado','falar com humano','atendente','quero uma pessoa']\n  .some(p => mensagemUsuario.toLowerCase().includes(p));\n\nif (querAdvogado) {\n  s.etapa = 'encerrado';\n  s.statusLead = 'qualificado';\n  s.resumo = s.resumo || 'Lead pediu para falar diretamente com um advogado.';\n  return [{ json: { ...base,\n    respostaPronta: `Claro! Já vou avisar nossa equipe e um advogado entra em contato com você por aqui. 🌿`,\n    resumo: s.resumo, statusLead: 'qualificado', atendimentoFinalizado: true, qualificado: true } }];\n}\n\n// Corte deterministico: sem prescricao medica o HC nao avanca.\nif (s.perfil === 'cliente' && s.prescricao === 'Nao') {\n  s.etapa = 'encerrado';\n  s.statusLead = 'nao_qualificado';\n  s.resumo = 'Lead busca HC para autocultivo, mas ainda NAO possui prescricao medica. Orientado a providenciar a prescricao antes de dar entrada no processo.';\n  const msg = `Entendi, *${s.nome || 'tudo bem'}*. 🌿\\n\\nPra entrar com o *HC de autocultivo* o primeiro passo é ter a *prescrição médica* indicando o uso de Cannabis — é ela que sustenta o pedido judicial.\\n\\nO caminho é procurar um *médico prescritor* (muitos atendem por telemedicina) para avaliar seu caso e emitir a prescrição. Com ela em mãos, é só voltar aqui que a gente dá sequência! 💚`;\n  return [{ json: { ...base, prescricao: 'Nao',\n    respostaPronta: msg, resumo: s.resumo,\n    statusLead: 'nao_qualificado', atendimentoFinalizado: true, qualificado: false } }];\n}\n\n// Valvula de seguranca: conversa muito longa vai para o advogado mesmo assim.\nif (mensagensCount >= 14) {\n  s.etapa = 'encerrado';\n  s.statusLead = 'qualificado';\n  s.resumo = s.resumo || 'Conversa longa encerrada automaticamente. Verificar historico com o lead.';\n  return [{ json: { ...base,\n    respostaPronta: `Obrigada pelas informações! ✅ Vou encaminhar tudo pra nossa equipe e um especialista fala com você em breve. 🌿`,\n    resumo: s.resumo, statusLead: 'qualificado', atendimentoFinalizado: true, qualificado: true } }];\n}\n\nreturn [{ json: { ...base, atendimentoFinalizado: false, qualificado: false } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1300,
+        240
+      ],
+      "id": "v2-contexto-0008",
+      "name": "Preparar Contexto para IA"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nconst s = global.sessoes?.[input.phone] || {};\nconst nome = s.nome || input.pushName || '';\nconst trecho = nome ? `, *${nome}*` : '';\n\nconst msg = s.statusLead === 'nao_qualificado'\n  ? `Fico à disposição${trecho}! 🌿 Assim que você tiver a *prescrição médica* em mãos, é só me chamar aqui que a gente dá sequência.\\n\\nSe quiser recomeçar o atendimento, digite *MENU*.`\n  : `Seu atendimento já está com a nossa equipe${trecho}! 🌿 Um especialista vai falar com você por aqui em breve.\\n\\nSe precisar recomeçar, digite *MENU*.`;\n\nreturn [{ json: { ...input, message: msg, atendimentoFinalizado: false, qualificado: false } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1300,
+        460
+      ],
+      "id": "v2-pos-0019",
+      "name": "Mensagem Pos Atendimento"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Preparar Contexto para IA').item.json.mensagemUsuario }}",
+        "options": {
+          "systemMessage": "=Você é a *Ana*, assistente do Escritório José Simeão Advocacia, especializado em Cannabis Medicinal.\n\nSua função é conversar de forma NATURAL e HUMANA com quem chega pelo WhatsApp, entender o caso da pessoa e passar um resumo bem feito para o advogado. Você não é um formulário — você é uma pessoa atenciosa que escuta.\n\nDADOS DO ATENDIMENTO (use, mas nunca liste isso para o lead):\nNome: {{ $('Preparar Contexto para IA').item.json.nome }}\nPerfil: {{ $('Preparar Contexto para IA').item.json.perfil }}\nServiço: {{ $('Preparar Contexto para IA').item.json.servico }}\nWhatsApp: {{ $('Preparar Contexto para IA').item.json.phone }}\nPrescrição médica confirmada: {{ $('Preparar Contexto para IA').item.json.prescricao }}\nMensagem atual: {{ $('Preparar Contexto para IA').item.json.mensagemUsuario }}\n\n════════════════════════════════\nCOMO VOCÊ FALA\n════════════════════════════════\n- Tom caloroso, próximo, brasileiro. Como uma pessoa real conversando, não um robô.\n- Frases curtas. No máximo 3 linhas por mensagem.\n- No máximo 1 emoji por mensagem 🌿\n- NUNCA use listas numeradas de opções (\"1 - Sim / 2 - Não\"). Pergunte de forma natural.\n- Faça UMA pergunta por vez. Deixe a pessoa falar.\n- Reaja ao que a pessoa disse antes de puxar o próximo assunto. Se ela contou algo difícil, acolha.\n- NUNCA dê orientação jurídica, não prometa resultado, não fale de valores/honorários.\n- NUNCA repita a saudação inicial nem pergunte o nome (já temos).\n- Se perguntarem se você é humana ou IA, responda com honestidade em uma linha e siga a conversa.\n\n════════════════════════════════\nPERFIL \"cliente\" (paciente/familiar — HC para autocultivo)\n════════════════════════════════\nA pessoa JÁ FOI PERGUNTADA se tem prescrição médica. Sua primeira mensagem responde a isso.\n\nCASO A — Ela NÃO tem prescrição médica (ou não vai conseguir agora):\nAcolha, explique em linguagem simples que a prescrição médica é a base do pedido de HC, oriente a procurar um médico prescritor (muitos atendem por telemedicina) e convide a voltar quando tiver. Encerre com carinho.\nAo fazer isso, termine sua resposta com a tag [SEM_PRESCRICAO] e o bloco de resumo.\n\nCASO B — Ela TEM prescrição médica:\nÓtimo, o caso avança. Agora converse de verdade para entender a situação. Ao longo da conversa, de forma natural e sem parecer checklist, você precisa descobrir:\n  • a condição de saúde / motivo do uso (sem pedir detalhe médico íntimo)\n  • se ela já tem *laudo agronômico* do cultivo (ou se sabe o que é)\n  • se já fez algum *curso de autocultivo*\n  • qualquer urgência, medo ou situação específica que ela queira contar\nDeixe a pessoa escrever à vontade. Se ela já contou algo, não pergunte de novo.\nQuando tiver um retrato razoável do caso (normalmente em 3 a 5 trocas), agradeça, avise que vai encaminhar para a equipe e encerre com o bloco de resumo + [ATENDIMENTO_CONCLUIDO].\n\n════════════════════════════════\nPERFIL \"palestra\"\n════════════════════════════════\nEntenda: para qual público/instituição, formato desejado, previsão de data e o contato (e-mail ou telefone) para a equipe retornar. Converse naturalmente, sem formulário. Quando tiver o essencial, agradeça e encerre com resumo + [ATENDIMENTO_CONCLUIDO].\n\n════════════════════════════════\nPERFIL \"profissional\"\n════════════════════════════════\nEntenda: qual a profissão, onde atua, com que tipo de paciente, e o que exatamente busca (orientação para prescrever, consultoria para a clínica, dúvida regulatória). Converse naturalmente. Quando tiver o essencial, agradeça e encerre com resumo + [ATENDIMENTO_CONCLUIDO].\n\n════════════════════════════════\nCOMO ENCERRAR (formato obrigatório)\n════════════════════════════════\nAo encerrar, sua resposta deve ser: a mensagem de despedida para o lead, seguida do bloco abaixo.\n\n[RESUMO_INICIO]\nEscreva aqui, em até 5 linhas, um resumo objetivo para o ADVOGADO ler. Cubra apenas o que realmente apareceu na conversa: o que a pessoa procura, situação de saúde/contexto, se tem prescrição médica, se tem laudo agronômico, se fez curso de autocultivo, e qualquer detalhe relevante que ela contou. Sem emojis, sem enfeite, direto ao ponto. Nunca escreva \"não se aplica\" nem invente informação que não foi dita.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]\n\nSe o encerramento for por FALTA DE PRESCRIÇÃO MÉDICA, troque a tag final [ATENDIMENTO_CONCLUIDO] por [SEM_PRESCRICAO].\n\nAs tags são removidas antes de chegar ao lead — servem só para a equipe interna. Nunca use tag em mensagem que não seja de encerramento."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1060,
+        240
+      ],
+      "id": "v2-agent-0009",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        -1120,
+        440
+      ],
+      "id": "v2-anthropic-0010",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "FT3UMqdJad4KmW3P",
+          "name": "Vitao"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Extrair Dados da Mensagem').item.json.phone }}",
+        "contextWindowLength": 12
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -960,
+        440
+      ],
+      "id": "v2-memory-0011",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "RryHpUamo58VME6T",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const global = $getWorkflowStaticData('global');\nconst ctx = $('Preparar Contexto para IA').item.json;\nconst s = global.sessoes?.[ctx.phone] || {};\n\n// Caminhos deterministicos (corte de prescricao, pedido de advogado, valvula)\nif (ctx.respostaPronta) {\n  return [{ json: {\n    ...ctx,\n    message: ctx.respostaPronta,\n    resumo: ctx.resumo || '',\n    statusLead: ctx.statusLead || '',\n    atendimentoFinalizado: true,\n    qualificado: !!ctx.qualificado\n  } }];\n}\n\nconst agente = $('AI Agent').item.json;\nlet resposta = agente?.output || agente?.text || agente?.content || agente?.response\n  || 'Desculpa, tive um probleminha técnico aqui. Pode repetir? 🌿';\n\nconst semPrescricao = /\\[SEM_PRESCRICAO\\]/i.test(resposta);\nconst concluido = /\\[ATENDIMENTO_CONCLUIDO\\]/i.test(resposta);\n\nconst resumoMatch = resposta.match(/\\[RESUMO_INICIO\\]([\\s\\S]*?)\\[RESUMO_FIM\\]/i);\nconst resumo = resumoMatch ? resumoMatch[1].trim() : (s.resumo || '');\n\nresposta = resposta\n  .replace(/\\[RESUMO_INICIO\\][\\s\\S]*?\\[RESUMO_FIM\\]/gi, '')\n  .replace(/\\s*\\[ATENDIMENTO_CONCLUIDO\\]\\s*/gi, '')\n  .replace(/\\s*\\[SEM_PRESCRICAO\\]\\s*/gi, '')\n  .trim();\n\nlet statusLead = '';\nlet atendimentoFinalizado = false;\nlet qualificado = false;\n\nif (semPrescricao) {\n  statusLead = 'nao_qualificado';\n  atendimentoFinalizado = true;\n  if (global.sessoes?.[ctx.phone]) {\n    global.sessoes[ctx.phone].etapa = 'encerrado';\n    global.sessoes[ctx.phone].prescricao = 'Nao';\n    global.sessoes[ctx.phone].statusLead = statusLead;\n    global.sessoes[ctx.phone].resumo = resumo;\n  }\n} else if (concluido) {\n  statusLead = 'qualificado';\n  atendimentoFinalizado = true;\n  qualificado = true;\n  if (global.sessoes?.[ctx.phone]) {\n    global.sessoes[ctx.phone].etapa = 'encerrado';\n    global.sessoes[ctx.phone].statusLead = statusLead;\n    global.sessoes[ctx.phone].resumo = resumo;\n  }\n}\n\nreturn [{ json: {\n  ...ctx,\n  message: resposta,\n  resumo,\n  statusLead,\n  atendimentoFinalizado,\n  qualificado\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -820,
+        240
+      ],
+      "id": "v2-procia-0012",
+      "name": "Processar Resposta da IA"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1120643227802579",
+        "recipientPhoneNumber": "={{ $json.phone }}",
+        "textBody": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -600,
+        240
+      ],
+      "id": "v2-envcliente-0013",
+      "name": "Enviar mensagem cliente",
+      "webhookId": "b2f1c9d0-1111-4a2b-9c3d-000000000013",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "iwP7SMgYbk6Pzkhs",
+          "name": "Simeao"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fim1",
+              "leftValue": "={{ $('Processar Resposta da IA').item.json.atendimentoFinalizado }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -380,
+        240
+      ],
+      "id": "v2-iffim-0014",
+      "name": "Atendimento Finalizado?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.all()[0].json;\nconst global = $getWorkflowStaticData('global');\nconst s = global.sessoes?.[d.phone] || {};\n\nconst payload = {\n  nome: d.nome || s.nome || '',\n  telefone: d.phone || '',\n  telefoneContato: d.telefone || s.telefone || d.phone || '',\n  email: d.email || s.email || '',\n  origem: 'WhatsApp - Ana (Simeao Advogados)',\n  perfil: d.perfil || s.perfil || '',\n  servico: d.servico || s.servico || '',\n  statusLead: d.statusLead || s.statusLead || '',\n  qualificado: !!d.qualificado,\n  prescricaoMedica: d.prescricao || s.prescricao || '',\n  resumoConversa: d.resumo || s.resumo || '',\n  dataAtendimento: new Date().toISOString()\n};\n\nreturn [{ json: { ...d, crmPayload: payload } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        140
+      ],
+      "id": "v2-payload-0015",
+      "name": "Montar Payload CRM"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://SUBSTITUA-PELA-URL-DA-API-SYNCHUB/leads",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.crmPayload) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        60,
+        140
+      ],
+      "id": "v2-crm-0016",
+      "name": "Enviar Lead para o CRM",
+      "onError": "continueRegularOutput",
+      "notes": "SyncHub CRM - preencher URL e selecionar a credencial SyncHub apos importar."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "qual1",
+              "leftValue": "={{ $('Processar Resposta da IA').item.json.qualificado }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        280,
+        140
+      ],
+      "id": "v2-ifqual-0017",
+      "name": "Lead Qualificado?"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1120643227802579",
+        "recipientPhoneNumber": "+55 11 94132-1970",
+        "textBody": "=🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\nNome: {{ $('Processar Resposta da IA').item.json.nome || 'Nao informado' }}\nWhatsApp: {{ $('Processar Resposta da IA').item.json.phone || 'Nao informado' }}\nServico: {{ $('Processar Resposta da IA').item.json.servico || 'Nao informado' }}\n\n📋 *Resumo da conversa:*\n{{ $('Processar Resposta da IA').item.json.resumo || 'Sem resumo registrado' }}\n\n⚠️ *Entrar em contato o quanto antes!*",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        60
+      ],
+      "id": "v2-notif-0018",
+      "name": "Notificar Advogado",
+      "webhookId": "b2f1c9d0-1111-4a2b-9c3d-000000000018",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "iwP7SMgYbk6Pzkhs",
+          "name": "Simeao"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extrair Dados da Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Dados da Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Buscar Sessao do Usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Sessao do Usuario": {
+      "main": [
+        [
+          {
+            "node": "Verificar Etapa da Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Etapa da Conversa": {
+      "main": [
+        [
+          {
+            "node": "Montar Boas-vindas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salvar Nome e Enviar Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Processar Opcao do Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Contexto para IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensagem Pos Atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Montar Boas-vindas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Pos Atendimento": {
+      "main": [
+        [
+          {
+            "node": "Enviar mensagem cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Boas-vindas": {
+      "main": [
+        [
+          {
+            "node": "Enviar mensagem cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Nome e Enviar Menu": {
+      "main": [
+        [
+          {
+            "node": "Enviar mensagem cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Opcao do Menu": {
+      "main": [
+        [
+          {
+            "node": "Enviar mensagem cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Contexto para IA": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Processar Resposta da IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Resposta da IA": {
+      "main": [
+        [
+          {
+            "node": "Enviar mensagem cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar mensagem cliente": {
+      "main": [
+        [
+          {
+            "node": "Atendimento Finalizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atendimento Finalizado?": {
+      "main": [
+        [
+          {
+            "node": "Montar Payload CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Montar Payload CRM": {
+      "main": [
+        [
+          {
+            "node": "Enviar Lead para o CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Lead para o CRM": {
+      "main": [
+        [
+          {
+            "node": "Lead Qualificado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Qualificado?": {
+      "main": [
+        [
+          {
+            "node": "Notificar Advogado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "v2-synchub-humanizado"
+  }
+}

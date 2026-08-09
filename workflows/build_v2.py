@@ -99,54 +99,16 @@ if (!global.sessoes[dados.phone]) global.sessoes[dados.phone] = {};
 
 const bruto = (dados.textoRecebido || '').trim();
 const nome = bruto.length >= 2 && bruto.length <= 60 ? bruto : (dados.pushName || 'cliente');
-Object.assign(global.sessoes[dados.phone], { nome, etapa: 'menu', ultimaAtividade: Date.now() });
+Object.assign(global.sessoes[dados.phone], {
+  nome, etapa: 'agente_ia', perfil: '', servico: '', prescricao: '',
+  resumo: '', statusLead: '', ultimaAtividade: Date.now()
+});
 
-const mensagem = `Prazer, *${nome}*! 😊\n\nMe conta como posso te ajudar:\n\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\n3️⃣ - Sou *médico, dentista, fisioterapeuta ou veterinário* e desejo uma consultoria\n\nÉ só digitar o número 👇`;
+const mensagem = `Prazer, *${nome}*! 😊
 
-return [{ json: { phone: dados.phone, pushName: dados.pushName, nome, message: mensagem, etapa: 'menu' } }];
-"""
+Me conta, o que te trouxe até aqui hoje?`;
 
-CODE_MENU = r"""const input = $input.all()[0].json;
-const global = $getWorkflowStaticData('global');
-if (!global.sessoes) global.sessoes = {};
-if (!global.sessoes[input.phone]) global.sessoes[input.phone] = {};
-const s = global.sessoes[input.phone];
-s.ultimaAtividade = Date.now();
-
-const opcao = (input.textoRecebido || '').trim()
-  .replace(/1️⃣/g, '1').replace(/2️⃣/g, '2').replace(/3️⃣/g, '3');
-
-const nome = s.nome || 'tudo bem';
-
-const opcoes = {
-  '1': {
-    perfil: 'cliente',
-    servico: 'HC para Autocultivo Medicinal',
-    mensagem: `Entendi, *${nome}*. 🌿 Vamos ver como o escritório pode te ajudar com o *HC para autocultivo*.\n\nUma coisa importante logo de início: você já tem *prescrição médica* indicando o uso de Cannabis?`
-  },
-  '2': {
-    perfil: 'palestra',
-    servico: 'Palestra sobre Cannabis Medicinal',
-    mensagem: `Que legal, *${nome}*! 🎤 O escritório realiza palestras e treinamentos sobre Cannabis Medicinal e os aspectos jurídicos do tema.\n\nMe conta um pouco: é pra qual tipo de público ou instituição?`
-  },
-  '3': {
-    perfil: 'profissional',
-    servico: 'Consultoria para Profissional de Saúde',
-    mensagem: `Ótimo, *${nome}*! 🌿 O escritório oferece consultoria para profissionais de saúde que atuam ou querem atuar com Cannabis Medicinal.\n\nMe conta sobre a sua área de atuação e o que você está buscando 👇`
-  }
-};
-
-if (opcoes[opcao]) {
-  const { perfil, servico, mensagem } = opcoes[opcao];
-  Object.assign(s, {
-    perfil, servico, etapa: 'agente_ia',
-    prescricao: '', resumo: '', statusLead: '',
-    perguntouPrescricao: perfil === 'cliente'
-  });
-  return [{ json: { ...input, perfil, servico, message: mensagem, etapa: 'agente_ia' } }];
-}
-
-return [{ json: { ...input, message: `Só pra eu te direcionar certinho, digita o *número* da opção:\n\n1️⃣ - Sou *paciente ou familiar* e preciso de ajuda jurídica (*HC para autocultivo*)\n2️⃣ - Tenho interesse em *palestra* sobre Cannabis Medicinal\n3️⃣ - Sou *médico, dentista, fisioterapeuta ou veterinário* e desejo uma consultoria` } }];
+return [{ json: { phone: dados.phone, pushName: dados.pushName, nome, message: mensagem, etapa: 'agente_ia' } }];
 """
 
 CODE_CONTEXTO = r"""const input = $input.all()[0].json;
@@ -164,25 +126,6 @@ if (emailMatch && !s.email) s.email = emailMatch[0];
 
 const telMatch = mensagemUsuario.replace(/\D/g, '');
 if (!s.telefone && telMatch.length >= 10 && telMatch.length <= 13) s.telefone = telMatch;
-
-// Classificador de alta confianca para a pergunta de prescricao medica.
-// Se ficar ambiguo, devolve '' e a IA continua investigando na conversa.
-function classificaPrescricao(txt) {
-  const t = txt.toLowerCase().trim();
-  if (/^(1|sim|s|tenho|ja tenho|já tenho|possuo|tenho sim|sim tenho)$/.test(t)) return 'Sim';
-  if (/^sim\b/.test(t) && !/\b(nao|não)\b/.test(t)) return 'Sim';
-  if (/^(nao|não)\b/.test(t)) return 'Nao';
-  if (/^(2|nao|não|n|nao tenho|não tenho|ainda nao|ainda não|nao possuo|não possuo)$/.test(t)) return 'Nao';
-  if (/\b(tenho|possuo|consegui|tenho a receita|com receita|receituario|receituário)\b/.test(t)
-      && !/\b(nao|não|ainda nao|ainda não|sem)\b/.test(t)) return 'Sim';
-  if (/\b(nao tenho|não tenho|ainda nao|ainda não|sem prescricao|sem prescrição|sem receita|nao possuo|não possuo)\b/.test(t)) return 'Nao';
-  return '';
-}
-
-if (s.perfil === 'cliente' && s.perguntouPrescricao && !s.prescricao) {
-  const c = classificaPrescricao(mensagemUsuario);
-  if (c) s.prescricao = c;
-}
 
 const base = {
   ...input,
@@ -256,6 +199,25 @@ let resposta = agente?.output || agente?.text || agente?.content || agente?.resp
 const semPrescricao = /\[SEM_PRESCRICAO\]/i.test(resposta);
 const concluido = /\[ATENDIMENTO_CONCLUIDO\]/i.test(resposta);
 
+// A IA identifica o assunto pela conversa, sem menu numerado.
+const SERVICOS = {
+  cliente: 'HC para Autocultivo Medicinal',
+  palestra: 'Palestra sobre Cannabis Medicinal',
+  profissional: 'Consultoria para Profissional de Saude',
+  outro: 'Outro assunto'
+};
+const mPerfil = resposta.match(/\[PERFIL:\s*(cliente|palestra|profissional|outro)\s*\]/i);
+if (mPerfil && global.sessoes?.[ctx.phone]) {
+  const perfil = mPerfil[1].toLowerCase();
+  global.sessoes[ctx.phone].perfil = perfil;
+  global.sessoes[ctx.phone].servico = SERVICOS[perfil];
+}
+
+const mPresc = resposta.match(/\[PRESCRICAO:\s*(sim|nao|não)\s*\]/i);
+if (mPresc && global.sessoes?.[ctx.phone]) {
+  global.sessoes[ctx.phone].prescricao = /sim/i.test(mPresc[1]) ? 'Sim' : 'Nao';
+}
+
 const resumoMatch = resposta.match(/\[RESUMO_INICIO\]([\s\S]*?)\[RESUMO_FIM\]/i);
 const resumo = resumoMatch ? resumoMatch[1].trim() : (s.resumo || '');
 
@@ -263,6 +225,8 @@ resposta = resposta
   .replace(/\[RESUMO_INICIO\][\s\S]*?\[RESUMO_FIM\]/gi, '')
   .replace(/\s*\[ATENDIMENTO_CONCLUIDO\]\s*/gi, '')
   .replace(/\s*\[SEM_PRESCRICAO\]\s*/gi, '')
+  .replace(/\s*\[PERFIL:[^\]]*\]\s*/gi, '')
+  .replace(/\s*\[PRESCRICAO:[^\]]*\]\s*/gi, '')
   .trim();
 
 let statusLead = '';
@@ -289,8 +253,13 @@ if (semPrescricao) {
   }
 }
 
+const sAtual = global.sessoes?.[ctx.phone] || {};
+
 return [{ json: {
   ...ctx,
+  perfil: sAtual.perfil || ctx.perfil || '',
+  servico: sAtual.servico || ctx.servico || '',
+  prescricao: sAtual.prescricao || ctx.prescricao || '',
   message: resposta,
   resumo,
   statusLead,
@@ -336,72 +305,87 @@ return [{ json: { ...d, crmPayload: payload } }];
 
 # ---------------------------------------------------------------- PROMPT
 
-PROMPT = """Você é a *Ana*, assistente do Escritório José Simeão Advocacia, especializado em Cannabis Medicinal.
+PROMPT = """Você é a *Ana*, do Escritório José Simeão Advocacia, especializado em Cannabis Medicinal. Você atende pelo WhatsApp.
 
-Sua função é conversar de forma NATURAL e HUMANA com quem chega pelo WhatsApp, entender o caso da pessoa e passar um resumo bem feito para o advogado. Você não é um formulário — você é uma pessoa atenciosa que escuta.
+Você conversa como uma pessoa de verdade — atenciosa, direta, brasileira. Nunca como um menu, um formulário ou um robô. A pessoa já disse o nome dela e acabou de contar (ou vai contar) o que precisa. Seu trabalho é entender de verdade o caso e passar um resumo bem feito para o advogado.
 
-DADOS DO ATENDIMENTO (use, mas nunca liste isso para o lead):
+CONTEXTO (uso interno — nunca mostre isso ao lead):
 Nome: {{ $('Preparar Contexto para IA').item.json.nome }}
-Perfil: {{ $('Preparar Contexto para IA').item.json.perfil }}
-Serviço: {{ $('Preparar Contexto para IA').item.json.servico }}
+Assunto identificado: {{ $('Preparar Contexto para IA').item.json.perfil }}
+Prescrição médica: {{ $('Preparar Contexto para IA').item.json.prescricao }}
 WhatsApp: {{ $('Preparar Contexto para IA').item.json.phone }}
-Prescrição médica confirmada: {{ $('Preparar Contexto para IA').item.json.prescricao }}
 Mensagem atual: {{ $('Preparar Contexto para IA').item.json.mensagemUsuario }}
 
 ════════════════════════════════
 COMO VOCÊ FALA
 ════════════════════════════════
-- Tom caloroso, próximo, brasileiro. Como uma pessoa real conversando, não um robô.
-- Frases curtas. No máximo 3 linhas por mensagem.
-- No máximo 1 emoji por mensagem 🌿
-- NUNCA use listas numeradas de opções ("1 - Sim / 2 - Não"). Pergunte de forma natural.
-- Faça UMA pergunta por vez. Deixe a pessoa falar.
-- Reaja ao que a pessoa disse antes de puxar o próximo assunto. Se ela contou algo difícil, acolha.
-- NUNCA dê orientação jurídica, não prometa resultado, não fale de valores/honorários.
-- NUNCA repita a saudação inicial nem pergunte o nome (já temos).
-- Se perguntarem se você é humana ou IA, responda com honestidade em uma linha e siga a conversa.
+- Frases curtas, no máximo 3 linhas. Máximo 1 emoji por mensagem 🌿
+- NUNCA ofereça listas de opções numeradas. Nada de "1 - ... 2 - ... 3 - ...". Isso entrega que você é um bot.
+- UMA pergunta por vez, e sempre encaixada no que a pessoa acabou de dizer.
+- Reaja antes de perguntar. Se a pessoa contou algo difícil, acolha em uma linha antes de seguir.
+- Não repita a saudação nem pergunte o nome de novo.
+- Nunca dê orientação jurídica, não prometa resultado, não fale de valores.
+- Se perguntarem se você é humana ou IA, responda com honestidade em uma linha e siga.
 
 ════════════════════════════════
-PERFIL "cliente" (paciente/familiar — HC para autocultivo)
+PRIMEIRO: DESCUBRA O ASSUNTO (sem perguntar em formato de menu)
 ════════════════════════════════
-A pessoa JÁ FOI PERGUNTADA se tem prescrição médica. Sua primeira mensagem responde a isso.
+Se "Assunto identificado" ainda estiver vazio, sua tarefa é entender, pela fala da pessoa, em qual dos casos ela se encaixa:
 
-CASO A — Ela NÃO tem prescrição médica (ou não vai conseguir agora):
-Acolha, explique em linguagem simples que a prescrição médica é a base do pedido de HC, oriente a procurar um médico prescritor (muitos atendem por telemedicina) e convide a voltar quando tiver. Encerre com carinho.
-Ao fazer isso, termine sua resposta com a tag [SEM_PRESCRICAO] e o bloco de resumo.
+  cliente      → é paciente ou familiar e precisa de ajuda jurídica (HC para autocultivo)
+  palestra     → quer contratar/convidar para uma palestra sobre Cannabis Medicinal
+  profissional → é médico, dentista, fisioterapeuta ou veterinário buscando consultoria
 
-CASO B — Ela TEM prescrição médica:
-Ótimo, o caso avança. Agora converse de verdade para entender a situação. Ao longo da conversa, de forma natural e sem parecer checklist, você precisa descobrir:
-  • a condição de saúde / motivo do uso (sem pedir detalhe médico íntimo)
-  • se ela já tem *laudo agronômico* do cultivo (ou se sabe o que é)
+Na maioria das vezes a primeira frase já revela ("minha filha tem epilepsia", "sou veterinária", "queria uma palestra pra minha associação"). Quando estiver claro, marque com a tag [PERFIL:cliente] (ou palestra / profissional) no fim da resposta e siga a conversa daquele caminho, naturalmente.
+
+Se estiver mesmo ambíguo, faça UMA pergunta aberta e humana para entender melhor — por exemplo "Entendi! E isso é pra você mesmo ou pra alguém da família?" — nunca ofereça a lista de opções.
+
+Se o assunto não for nenhum dos três, marque [PERFIL:outro], entenda o que a pessoa quer e encaminhe para a equipe.
+
+════════════════════════════════
+CAMINHO "cliente" — HC para autocultivo
+════════════════════════════════
+Existe um pré-requisito inegociável: a *prescrição médica* indicando o uso de Cannabis. É ela que sustenta o pedido judicial. Sem prescrição, o caso não avança.
+
+Descubra isso cedo na conversa, mas de forma natural e encaixada no que a pessoa contou. Exemplo: se ela falou do tratamento da mãe, cabe perguntar "E o médico dela já chegou a prescrever a Cannabis?". Nunca pergunte de forma seca ou com opções numeradas.
+
+Quando souber a resposta, marque [PRESCRICAO:sim] ou [PRESCRICAO:nao].
+
+SE NÃO TEM PRESCRIÇÃO:
+Acolha, explique em linguagem simples que a prescrição é a base do pedido, oriente a procurar um médico prescritor (muitos atendem por telemedicina) e convide a voltar quando tiver. Encerre com carinho, com o bloco de resumo e a tag [SEM_PRESCRICAO].
+
+SE TEM PRESCRIÇÃO:
+O caso avança. Agora converse de verdade. Ao longo da conversa, de forma natural e sem parecer checklist, você precisa entender:
+  • a condição de saúde / motivo do uso (sem invadir detalhe médico íntimo)
+  • se já tem *laudo agronômico* do cultivo — e se ela não souber o que é, explique em uma linha
   • se já fez algum *curso de autocultivo*
-  • qualquer urgência, medo ou situação específica que ela queira contar
-Deixe a pessoa escrever à vontade. Se ela já contou algo, não pergunte de novo.
-Quando tiver um retrato razoável do caso (normalmente em 3 a 5 trocas), agradeça, avise que vai encaminhar para a equipe e encerre com o bloco de resumo + [ATENDIMENTO_CONCLUIDO].
+  • qualquer urgência, medo ou situação particular que ela queira contar
+Encaixe esses assuntos no fluxo da conversa, um de cada vez. Se a pessoa já mencionou algo, não pergunte de novo.
+Quando tiver um retrato razoável do caso (normalmente em 3 a 5 trocas), agradeça, avise que vai encaminhar e encerre com o bloco de resumo + [ATENDIMENTO_CONCLUIDO].
 
 ════════════════════════════════
-PERFIL "palestra"
+CAMINHO "palestra"
 ════════════════════════════════
-Entenda: para qual público/instituição, formato desejado, previsão de data e o contato (e-mail ou telefone) para a equipe retornar. Converse naturalmente, sem formulário. Quando tiver o essencial, agradeça e encerre com resumo + [ATENDIMENTO_CONCLUIDO].
+Entenda naturalmente: para qual público/instituição, formato, previsão de data e um contato (e-mail ou telefone) para a equipe retornar. Quando tiver o essencial, agradeça e encerre com resumo + [ATENDIMENTO_CONCLUIDO].
 
 ════════════════════════════════
-PERFIL "profissional"
+CAMINHO "profissional"
 ════════════════════════════════
-Entenda: qual a profissão, onde atua, com que tipo de paciente, e o que exatamente busca (orientação para prescrever, consultoria para a clínica, dúvida regulatória). Converse naturalmente. Quando tiver o essencial, agradeça e encerre com resumo + [ATENDIMENTO_CONCLUIDO].
+Entenda naturalmente: qual a profissão, onde atua, que tipo de paciente atende e o que exatamente busca (orientação para prescrever, consultoria para a clínica, dúvida regulatória). Não pergunte sobre laudo agronômico nem curso de autocultivo — isso é assunto de paciente. Quando tiver o essencial, agradeça e encerre com resumo + [ATENDIMENTO_CONCLUIDO].
 
 ════════════════════════════════
 COMO ENCERRAR (formato obrigatório)
 ════════════════════════════════
-Ao encerrar, sua resposta deve ser: a mensagem de despedida para o lead, seguida do bloco abaixo.
+Ao encerrar, escreva a despedida para o lead e, logo depois, o bloco:
 
 [RESUMO_INICIO]
-Escreva aqui, em até 5 linhas, um resumo objetivo para o ADVOGADO ler. Cubra apenas o que realmente apareceu na conversa: o que a pessoa procura, situação de saúde/contexto, se tem prescrição médica, se tem laudo agronômico, se fez curso de autocultivo, e qualquer detalhe relevante que ela contou. Sem emojis, sem enfeite, direto ao ponto. Nunca escreva "não se aplica" nem invente informação que não foi dita.
+Resumo objetivo em até 5 linhas, escrito para o ADVOGADO ler. Cubra só o que apareceu na conversa: o que a pessoa procura, contexto de saúde, se tem prescrição médica, se tem laudo agronômico, se fez curso de autocultivo, e detalhes relevantes que ela contou. Sem emojis, direto ao ponto. Nunca escreva "não se aplica" nem invente informação.
 [RESUMO_FIM]
 [ATENDIMENTO_CONCLUIDO]
 
-Se o encerramento for por FALTA DE PRESCRIÇÃO MÉDICA, troque a tag final [ATENDIMENTO_CONCLUIDO] por [SEM_PRESCRICAO].
+Se o encerramento for por FALTA DE PRESCRIÇÃO MÉDICA, troque [ATENDIMENTO_CONCLUIDO] por [SEM_PRESCRICAO].
 
-As tags são removidas antes de chegar ao lead — servem só para a equipe interna. Nunca use tag em mensagem que não seja de encerramento."""
+REGRA DAS TAGS: [PERFIL:...] e [PRESCRICAO:...] podem aparecer em qualquer resposta, assim que a informação ficar clara. [ATENDIMENTO_CONCLUIDO] e [SEM_PRESCRICAO] só na mensagem de encerramento. Todas as tags são removidas antes de chegar ao lead — servem só para o sistema."""
 
 # ---------------------------------------------------------------- NODES
 
@@ -445,11 +429,6 @@ nodes.append({
                             "combinator": "and"},
              "renameOutput": True, "outputKey": "aguardando_nome"},
             {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict", "version": 3},
-                            "conditions": [{"id": "r3", "leftValue": "={{ $json.etapa }}", "rightValue": "menu",
-                                            "operator": {"type": "string", "operation": "equals"}}],
-                            "combinator": "and"},
-             "renameOutput": True, "outputKey": "menu"},
-            {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict", "version": 3},
                             "conditions": [{"id": "r4", "leftValue": "={{ $json.etapa }}", "rightValue": "agente_ia",
                                             "operator": {"type": "string", "operation": "equals"}}],
                             "combinator": "and"},
@@ -470,8 +449,7 @@ nodes.append({
 })
 
 nodes.append(code_node("Montar Boas-vindas", CODE_BOASVINDAS, "v2-boasvindas-0005", [-1300, -320]))
-nodes.append(code_node("Salvar Nome e Enviar Menu", CODE_NOME_MENU, "v2-nomemenu-0006", [-1300, -140]))
-nodes.append(code_node("Processar Opcao do Menu", CODE_MENU, "v2-menu-0007", [-1300, 40]))
+nodes.append(code_node("Salvar Nome e Abrir Conversa", CODE_NOME_MENU, "v2-nomemenu-0006", [-1300, -140]))
 nodes.append(code_node("Preparar Contexto para IA", CODE_CONTEXTO, "v2-contexto-0008", [-1300, 240]))
 nodes.append(code_node("Mensagem Pos Atendimento", CODE_POS_ATENDIMENTO, "v2-pos-0019", [-1300, 460]))
 
@@ -633,16 +611,14 @@ connections = {
     "Buscar Sessao do Usuario": {"main": [[{"node": "Verificar Etapa da Conversa", "type": "main", "index": 0}]]},
     "Verificar Etapa da Conversa": {"main": [
         [{"node": "Montar Boas-vindas", "type": "main", "index": 0}],
-        [{"node": "Salvar Nome e Enviar Menu", "type": "main", "index": 0}],
-        [{"node": "Processar Opcao do Menu", "type": "main", "index": 0}],
+        [{"node": "Salvar Nome e Abrir Conversa", "type": "main", "index": 0}],
         [{"node": "Preparar Contexto para IA", "type": "main", "index": 0}],
         [{"node": "Mensagem Pos Atendimento", "type": "main", "index": 0}],
         [{"node": "Montar Boas-vindas", "type": "main", "index": 0}],
     ]},
     "Mensagem Pos Atendimento": {"main": [[{"node": "Enviar mensagem cliente", "type": "main", "index": 0}]]},
     "Montar Boas-vindas": {"main": [[{"node": "Enviar mensagem cliente", "type": "main", "index": 0}]]},
-    "Salvar Nome e Enviar Menu": {"main": [[{"node": "Enviar mensagem cliente", "type": "main", "index": 0}]]},
-    "Processar Opcao do Menu": {"main": [[{"node": "Enviar mensagem cliente", "type": "main", "index": 0}]]},
+    "Salvar Nome e Abrir Conversa": {"main": [[{"node": "Enviar mensagem cliente", "type": "main", "index": 0}]]},
     "Preparar Contexto para IA": {"main": [[{"node": "AI Agent", "type": "main", "index": 0}]]},
     "AI Agent": {"main": [[{"node": "Processar Resposta da IA", "type": "main", "index": 0}]]},
     "Anthropic Chat Model": {"ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]},

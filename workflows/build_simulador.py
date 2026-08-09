@@ -152,11 +152,12 @@ HTML = """<!doctype html>
   <section class="chat">
     <div class="msgs" id="msgs"></div>
     <div class="atalhos">
-      <button data-t="1">1 · HC autocultivo</button>
-      <button data-t="2">2 · Palestra</button>
-      <button data-t="3">3 · Profissional</button>
-      <button data-t="tenho sim">tenho prescrição</button>
-      <button data-t="não tenho">não tenho prescrição</button>
+      <button data-t="minha filha tem epilepsia e me falaram do autocultivo">paciente / familiar</button>
+      <button data-t="queria convidar vocês pra uma palestra na minha associação">palestra</button>
+      <button data-t="sou veterinária e queria entender como prescrever">profissional de saúde</button>
+      <button data-t="preciso de uma informação">assunto vago</button>
+      <button data-t="tenho sim, o médico prescreveu">tenho prescrição</button>
+      <button data-t="ainda não tenho prescrição">não tenho prescrição</button>
       <button data-t="MENU">MENU</button>
     </div>
     <form class="entrada" id="form">

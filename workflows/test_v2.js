@@ -385,6 +385,54 @@ head('CENARIO O — quem entra em contato e o Dr. Jose Simeao');
   check('nao diz "nossa equipe"', !/nossa equipe/i.test(r.msg), r.msg);
 }
 
+// ================================================================ P
+head('CENARIO P — lead lacônico nao arrasta a conversa (teto de 5 turnos da IA)');
+{
+  const st = novoState('5511900000015', 'Eglis');
+  // IA sempre pedindo esclarecimento, como aconteceu no teste real
+  const ai = aiRoteiro(['Me conta um pouquinho mais sobre isso? 🌿']);
+  turno(st, 'ola', ai);
+  turno(st, 'eglis', ai);
+
+  const vagos = ['quero saber mais', 'para outra finalidade', 'outra coisa',
+                 'regulamentacao', 'normas', 'sei la', 'talvez'];
+  let r, fim = null, turnos = 0;
+  for (const v of vagos) {
+    if (fim) break;
+    r = turno(st, v, ai); turnos++;
+    if (r.saida.atendimentoFinalizado) fim = r;
+  }
+  show(fim || r);
+  check('encerrou sozinho', !!fim);
+  check('encerrou em no maximo 6 trocas', turnos <= 6, `levou ${turnos}`);
+  check('encaminhou ao advogado', fim && fim.notificou === true);
+  check('cita Dr. José Simeão', fim && /Dr\. José Simeão/.test(fim.msg), fim && fim.msg);
+  check('resumo admite o que nao foi informado',
+        fim && /nao informado/i.test(fim.crm.resumoConversa), fim && fim.crm.resumoConversa);
+  check('resumo nao inventa que possui algo',
+        fim && !/possui (prescricao|laudo)/i.test(fim.crm.resumoConversa), fim && fim.crm.resumoConversa);
+}
+
+// ================================================================ Q
+head('CENARIO Q — conversa normal nao e afetada pelo teto');
+{
+  const st = novoState('5511900000016', 'Rapido');
+  const ai = aiRoteiro([
+    'Entendi! E você já tem a prescrição médica? 🌿[PERFIL:cliente]',
+    'Ótimo! Já tem laudo agronômico e fez algum curso de autocultivo? 🌿[PRESCRICAO:sim]',
+    'Perfeito, obrigada! O Dr. José Simeão fala com você em breve. 🌿\n[RESUMO_INICIO]\nBusca HC autocultivo. Prescricao: sim. Laudo: nao. Curso: nao.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
+  ]);
+  turno(st, 'oi', ai);
+  turno(st, 'Rapido', ai);
+  turno(st, 'quero HC pra uso proprio', ai);
+  turno(st, 'tenho sim', ai);
+  const r = turno(st, 'nao tenho nenhum dos dois', ai); show(r);
+  check('fechou pelo caminho normal (3 turnos)', r.saida.atendimentoFinalizado === true);
+  check('qualificado', r.saida.qualificado === true);
+  check('resumo veio da IA, nao do teto',
+        !/encerrada automaticamente/i.test(r.crm.resumoConversa), r.crm.resumoConversa);
+}
+
 console.log('\n' + '='.repeat(70));
 console.log(falhas === 0 ? 'TODOS OS TESTES PASSARAM ✅' : `${falhas} VERIFICACAO(OES) FALHARAM ❌`);
 console.log('='.repeat(70));

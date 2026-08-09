@@ -163,6 +163,32 @@ if (s.perfil === 'cliente' && s.prescricao === 'Nao') {
     statusLead: 'nao_qualificado', atendimentoFinalizado: true, qualificado: false } }];
 }
 
+// TETO DE TURNOS: a IA tem no maximo 5 respostas. Depois disso encerra
+// com o que tiver, registrando honestamente o que ficou sem resposta.
+const turnosIA = (s.turnosIA || 0) + 1;
+s.turnosIA = turnosIA;
+
+if (turnosIA > 5) {
+  s.etapa = 'encerrado';
+  s.statusLead = 'qualificado';
+  if (!s.resumo) {
+    const pr = s.prescricao === 'Sim' ? 'sim'
+             : s.prescricao === 'Nao' ? 'nao' : 'nao informado';
+    const p = ['Conversa encerrada automaticamente: lead respondeu de forma vaga em varias trocas.'];
+    p.push('Interesse: ' + (s.servico || 'nao informado') + '.');
+    if (s.perfil === 'cliente' || !s.perfil) {
+      p.push('Prescricao medica: ' + pr + '.');
+      p.push('Laudo agronomico: nao informado.');
+      p.push('Curso de autocultivo: nao informado.');
+    }
+    p.push('Retomar o contato para levantar os detalhes.');
+    s.resumo = p.join(' ');
+  }
+  return [{ json: { ...base,
+    respostaPronta: `Obrigada, *${s.nome || ''}*! ✅ Já passei tudo pro *Dr. José Simeão* e ele fala com você por aqui em breve. 🌿`,
+    resumo: s.resumo, statusLead: 'qualificado', atendimentoFinalizado: true, qualificado: true } }];
+}
+
 // Valvula de seguranca: conversa muito longa vai para o advogado mesmo assim.
 if (mensagensCount >= 10) {
   s.etapa = 'encerrado';
@@ -355,6 +381,8 @@ Você tem no máximo *3 mensagens* para conduzir do início ao encaminhamento:
 
 Se a pessoa já entregou a informação antes de você perguntar, PULE a etapa e vá direto para a próxima. Fechar em 2 mensagens é melhor que em 3.
 
+Esse teto vale MESMO se a pessoa responder de forma vaga. Você tem no máximo 5 mensagens no total, contando as tentativas de esclarecimento. Ao chegar perto disso, feche com o que tiver — nunca fique perguntando indefinidamente.
+
 NUNCA faça uma pergunta de cada vez em sequência. NUNCA peça um dado que já foi dito. NUNCA prolongue a conversa para "confirmar" algo que já está claro. Ao menor sinal de que você tem o suficiente, feche.
 
 ════════════════════════════════
@@ -394,6 +422,10 @@ Peça esclarecimento de forma leve e específica:
   "Só pra eu entender direito: você já tem a prescrição em mãos ou ainda vai procurar o médico?"
 
 Nunca defina o perfil nem marque uma informação como confirmada com base em resposta incompleta. Pedir para repetir é melhor que registrar errado.
+
+LIMITE: você tem no máximo *2 tentativas* de esclarecimento na conversa inteira. Se depois disso a pessoa continuar vaga ou monossilábica, PARE de perguntar. Agradeça, encaminhe ao Dr. José Simeão e escreva "não informado" no resumo para tudo que ficou em aberto. Insistir cansa e faz o lead sumir.
+
+Ao pedir esclarecimento, faça UMA pergunta aberta. Evite enumerar as três possibilidades como se fosse um menu.
 
 ════════════════════════════════
 COMO VOCÊ FALA

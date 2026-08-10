@@ -329,7 +329,7 @@
           "conditions": [
             {
               "id": "fim1",
-              "leftValue": "={{ $('Processar Resposta da IA').item.json.atendimentoFinalizado }}",
+              "leftValue": "={{ $json.atendimentoFinalizado }}",
               "rightValue": "true",
               "operator": {
                 "type": "boolean",
@@ -346,8 +346,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -380,
-        240
+        -600,
+        460
       ],
       "id": "v2-iffim-0014",
       "name": "Atendimento Finalizado?"
@@ -377,8 +377,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        60,
-        140
+        -160,
+        380
       ],
       "id": "v2-crm-0016",
       "name": "Enviar Lead para o CRM",
@@ -397,7 +397,7 @@
           "conditions": [
             {
               "id": "qual1",
-              "leftValue": "={{ $('Processar Resposta da IA').item.json.qualificado }}",
+              "leftValue": "={{ $json.qualificado }}",
               "rightValue": "true",
               "operator": {
                 "type": "boolean",
@@ -414,8 +414,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        280,
-        140
+        -160,
+        560
       ],
       "id": "v2-ifqual-0017",
       "name": "Lead Qualificado?"
@@ -425,14 +425,14 @@
         "operation": "send",
         "phoneNumberId": "1120643227802579",
         "recipientPhoneNumber": "+55 11 94132-1970",
-        "textBody": "=🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\nNome: {{ $('Processar Resposta da IA').item.json.nome || 'Nao informado' }}\nWhatsApp: {{ $('Processar Resposta da IA').item.json.phone || 'Nao informado' }}\nServico: {{ $('Processar Resposta da IA').item.json.servico || 'Nao informado' }}\n\n📋 *Resumo da conversa:*\n{{ $('Processar Resposta da IA').item.json.resumo || 'Sem resumo registrado' }}\n\n⚠️ *Entrar em contato o quanto antes!*",
+        "textBody": "=🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\nNome: {{ $json.nome || 'Nao informado' }}\nWhatsApp: {{ $json.phone || 'Nao informado' }}\nServico: {{ $json.servico || 'Nao informado' }}\n\n📋 *Resumo da conversa:*\n{{ $json.resumo || 'Sem resumo registrado' }}\n\n⚠️ *Entrar em contato o quanto antes!*",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        500,
-        60
+        80,
+        560
       ],
       "id": "v2-notif-0018",
       "name": "Notificar Advogado",
@@ -602,19 +602,18 @@
             "node": "Enviar mensagem cliente",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Enviar mensagem cliente": {
-      "main": [
-        [
+          },
           {
             "node": "Atendimento Finalizado?",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Enviar mensagem cliente": {
+      "main": [
+        []
       ]
     },
     "Atendimento Finalizado?": {
@@ -636,19 +635,18 @@
             "node": "Enviar Lead para o CRM",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Enviar Lead para o CRM": {
-      "main": [
-        [
+          },
           {
             "node": "Lead Qualificado?",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Enviar Lead para o CRM": {
+      "main": [
+        []
       ]
     },
     "Lead Qualificado?": {

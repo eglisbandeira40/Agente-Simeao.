@@ -667,7 +667,7 @@ nodes.append({
             "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "loose", "version": 2},
             "conditions": [{
                 "id": "fim1",
-                "leftValue": "={{ $('Processar Resposta da IA').item.json.atendimentoFinalizado }}",
+                "leftValue": "={{ $json.atendimentoFinalizado }}",
                 "rightValue": "true",
                 "operator": {"type": "boolean", "operation": "true", "singleValue": True},
             }],
@@ -678,7 +678,7 @@ nodes.append({
     },
     "type": "n8n-nodes-base.if",
     "typeVersion": 2.2,
-    "position": [-380, 240],
+    "position": [-600, 460],
     "id": "v2-iffim-0014",
     "name": "Atendimento Finalizado?",
 })
@@ -696,7 +696,7 @@ nodes.append({
     },
     "type": "n8n-nodes-base.httpRequest",
     "typeVersion": 4.2,
-    "position": [60, 140],
+    "position": [-160, 380],
     "id": "v2-crm-0016",
     "name": "Enviar Lead para o CRM",
     "onError": "continueRegularOutput",
@@ -709,7 +709,7 @@ nodes.append({
             "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "loose", "version": 2},
             "conditions": [{
                 "id": "qual1",
-                "leftValue": "={{ $('Processar Resposta da IA').item.json.qualificado }}",
+                "leftValue": "={{ $json.qualificado }}",
                 "rightValue": "true",
                 "operator": {"type": "boolean", "operation": "true", "singleValue": True},
             }],
@@ -720,7 +720,7 @@ nodes.append({
     },
     "type": "n8n-nodes-base.if",
     "typeVersion": 2.2,
-    "position": [280, 140],
+    "position": [-160, 560],
     "id": "v2-ifqual-0017",
     "name": "Lead Qualificado?",
 })
@@ -728,10 +728,10 @@ nodes.append({
 NOTIF = (
     "=🌿 *Novo Lead - Simeao Advogados*\n\n"
     "Atendimento WhatsApp\n\n"
-    "Nome: {{ $('Processar Resposta da IA').item.json.nome || 'Nao informado' }}\n"
-    "WhatsApp: {{ $('Processar Resposta da IA').item.json.phone || 'Nao informado' }}\n"
-    "Servico: {{ $('Processar Resposta da IA').item.json.servico || 'Nao informado' }}\n\n"
-    "📋 *Resumo da conversa:*\n{{ $('Processar Resposta da IA').item.json.resumo || 'Sem resumo registrado' }}\n\n"
+    "Nome: {{ $json.nome || 'Nao informado' }}\n"
+    "WhatsApp: {{ $json.phone || 'Nao informado' }}\n"
+    "Servico: {{ $json.servico || 'Nao informado' }}\n\n"
+    "📋 *Resumo da conversa:*\n{{ $json.resumo || 'Sem resumo registrado' }}\n\n"
     "⚠️ *Entrar em contato o quanto antes!*"
 )
 
@@ -745,7 +745,7 @@ nodes.append({
     },
     "type": "n8n-nodes-base.whatsApp",
     "typeVersion": 1.1,
-    "position": [500, 60],
+    "position": [80, 560],
     "id": "v2-notif-0018",
     "name": "Notificar Advogado",
     "webhookId": "b2f1c9d0-1111-4a2b-9c3d-000000000018",
@@ -772,14 +772,20 @@ connections = {
     "AI Agent": {"main": [[{"node": "Processar Resposta da IA", "type": "main", "index": 0}]]},
     "Anthropic Chat Model": {"ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]},
     "Postgres Chat Memory": {"ai_memory": [[{"node": "AI Agent", "type": "ai_memory", "index": 0}]]},
-    "Processar Resposta da IA": {"main": [[{"node": "Enviar mensagem cliente", "type": "main", "index": 0}]]},
-    "Enviar mensagem cliente": {"main": [[{"node": "Atendimento Finalizado?", "type": "main", "index": 0}]]},
+    "Processar Resposta da IA": {"main": [[
+        {"node": "Enviar mensagem cliente", "type": "main", "index": 0},
+        {"node": "Atendimento Finalizado?", "type": "main", "index": 0},
+    ]]},
+    "Enviar mensagem cliente": {"main": [[]]},
     "Atendimento Finalizado?": {"main": [
         [{"node": "Montar Payload CRM", "type": "main", "index": 0}],
         [],
     ]},
-    "Montar Payload CRM": {"main": [[{"node": "Enviar Lead para o CRM", "type": "main", "index": 0}]]},
-    "Enviar Lead para o CRM": {"main": [[{"node": "Lead Qualificado?", "type": "main", "index": 0}]]},
+    "Montar Payload CRM": {"main": [[
+        {"node": "Enviar Lead para o CRM", "type": "main", "index": 0},
+        {"node": "Lead Qualificado?", "type": "main", "index": 0},
+    ]]},
+    "Enviar Lead para o CRM": {"main": [[]]},
     "Lead Qualificado?": {"main": [
         [{"node": "Notificar Advogado", "type": "main", "index": 0}],
         [],

@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/1120643227802579/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: '5511941321970',\n  type: 'template',\n  template: {\n    name: 'resumo_conversa',\n    language: { code: 'pt_BR' },\n    components: [\n      { type: 'body', parameters: [\n        {\n          type: 'text',\n          parameter_name: 'nome_cliente',\n          text: String($('Dados Completos?').item.json.nome == null ? '' : $('Dados Completos?').item.json.nome)\n          .replace(/[\\r\\n\\t]+/g, '. ')\n          .replace(/\\s\\s+/g, ' ')\n          .replace(/\\*/g, '')\n          .trim()\n          .slice(0, 80) || 'Nao informado'\n        },\n        {\n          type: 'text',\n          parameter_name: 'whatsapp_cliente',\n          text: String(($('Dados Completos?').item.json.telefone || $('Dados Completos?').item.json.phone) == null ? '' : ($('Dados Completos?').item.json.telefone || $('Dados Completos?').item.json.phone))\n          .replace(/[\\r\\n\\t]+/g, '. ')\n          .replace(/\\s\\s+/g, ' ')\n          .replace(/\\*/g, '')\n          .trim()\n          .slice(0, 30) || 'Nao informado'\n        },\n        {\n          type: 'text',\n          parameter_name: 'servico',\n          text: String($('Dados Completos?').item.json.servico == null ? '' : $('Dados Completos?').item.json.servico)\n          .replace(/[\\r\\n\\t]+/g, '. ')\n          .replace(/\\s\\s+/g, ' ')\n          .replace(/\\*/g, '')\n          .trim()\n          .slice(0, 120) || 'Nao informado'\n        },\n        {\n          type: 'text',\n          parameter_name: 'resumo_atendimento',\n          text: String($('Dados Completos?').item.json.resumo == null ? '' : $('Dados Completos?').item.json.resumo)\n          .replace(/[\\r\\n\\t]+/g, '. ')\n          .replace(/\\s\\s+/g, ' ')\n          .replace(/\\*/g, '')\n          .trim()\n          .slice(0, 800) || 'Nao informado'\n        }\n      ] }\n    ]\n  }\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4200,
+        -864
+      ],
+      "id": "b7f1a2c3-9d4e-4a5b-8c6d-000000000099",
+      "name": "Notificar Advogado Template",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "iwP7SMgYbk6Pzkhs",
+          "name": "Simeao"
+        }
+      }
+    }
+  ],
+  "connections": {}
+}

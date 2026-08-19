@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/1120643227802579/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({messaging_product:'whatsapp',to:'5511941321970',type:'template',template:{name:'resumo_conversa',language:{code:'pt_BR'},components:[{type:'body',parameters:[{type:'text',parameter_name:'nome_cliente',text:String($('Dados Completos?').item.json.nome==null?'':$('Dados Completos?').item.json.nome).replace(/[\\r\\n\\t]+/g,'. ').replace(/\\s{2,}/g,' ').replace(/\\*/g,'').trim().slice(0,80)||'Nao informado'},{type:'text',parameter_name:'whatsapp_cliente',text:String(($('Dados Completos?').item.json.telefone||$('Dados Completos?').item.json.phone)==null?'':($('Dados Completos?').item.json.telefone||$('Dados Completos?').item.json.phone)).replace(/[\\r\\n\\t]+/g,'. ').replace(/\\s{2,}/g,' ').replace(/\\*/g,'').trim().slice(0,30)||'Nao informado'},{type:'text',parameter_name:'servico',text:String($('Dados Completos?').item.json.servico==null?'':$('Dados Completos?').item.json.servico).replace(/[\\r\\n\\t]+/g,'. ').replace(/\\s{2,}/g,' ').replace(/\\*/g,'').trim().slice(0,120)||'Nao informado'},{type:'text',parameter_name:'resumo_atendimento',text:String($('Dados Completos?').item.json.resumo==null?'':$('Dados Completos?').item.json.resumo).replace(/[\\r\\n\\t]+/g,'. ').replace(/\\s{2,}/g,' ').replace(/\\*/g,'').trim().slice(0,800)||'Nao informado'}]}]}}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4464,
+        -864
+      ],
+      "id": "81ae8259-a908-4860-9132-8adeff4f472b",
+      "name": "Notificar Advogado",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "iwP7SMgYbk6Pzkhs",
+          "name": "Simeao"
+        }
+      }
+    }
+  ],
+  "connections": {}
+}

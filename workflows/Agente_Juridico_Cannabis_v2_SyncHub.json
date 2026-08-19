@@ -422,27 +422,43 @@
     },
     {
       "parameters": {
-        "operation": "send",
-        "phoneNumberId": "1120643227802579",
-        "recipientPhoneNumber": "+55 11 94132-1970",
-        "textBody": "=🌿 *Novo Lead - Simeao Advogados*\n\nAtendimento WhatsApp\n\nNome: {{ $json.nome || 'Nao informado' }}\nWhatsApp: {{ $json.phone || 'Nao informado' }}\nServico: {{ $json.servico || 'Nao informado' }}\n\n📋 *Resumo da conversa:*\n{{ $json.resumo || 'Sem resumo registrado' }}\n\n⚠️ *Entrar em contato o quanto antes!*",
-        "additionalFields": {}
+        "jsCode": "const d = $input.all()[0].json;\n\n// Parametros de template do WhatsApp NAO aceitam quebra de linha, tab,\n// nem 4+ espacos seguidos. A Meta rejeita a mensagem inteira se tiver.\nfunction limpa(txt, max) {\n  const t = String(txt == null ? '' : txt)\n    .replace(/([^.!?;:])\\s*[\\r\\n]+\\s*/g, '$1. ')\n    .replace(/\\s*[\\r\\n\\t]+\\s*/g, ' ')\n    .replace(/\\s{2,}/g, ' ')\n    .replace(/\\*/g, '')\n    .trim();\n  return (t.slice(0, max) || 'Nao informado');\n}\n\nconst params = {\n  nome_cliente:       limpa(d.nome, 80),\n  whatsapp_cliente:   limpa(d.phone, 30),\n  servico:            limpa(d.servico, 120),\n  resumo_atendimento: limpa(d.resumo, 800)\n};\n\nconst waBody = {\n  messaging_product: 'whatsapp',\n  to: '5511941321970',\n  type: 'template',\n  template: {\n    name: 'resumo_conversa',\n    language: { code: 'pt_BR' },\n    components: [{\n      type: 'body',\n      parameters: [\n        { type: 'text', parameter_name: 'nome_cliente',       text: params.nome_cliente },\n        { type: 'text', parameter_name: 'whatsapp_cliente',   text: params.whatsapp_cliente },\n        { type: 'text', parameter_name: 'servico',            text: params.servico },\n        { type: 'text', parameter_name: 'resumo_atendimento', text: params.resumo_atendimento }\n      ]\n    }]\n  }\n};\n\nreturn [{ json: { ...d, templateParams: params, waBody } }];\n"
       },
-      "type": "n8n-nodes-base.whatsApp",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         80,
         560
       ],
+      "id": "v2-aviso-0020",
+      "name": "Montar Aviso do Advogado"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/1120643227802579/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.waBody) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        560
+      ],
       "id": "v2-notif-0018",
       "name": "Notificar Advogado",
-      "webhookId": "b2f1c9d0-1111-4a2b-9c3d-000000000018",
       "credentials": {
         "whatsAppApi": {
           "id": "iwP7SMgYbk6Pzkhs",
           "name": "Simeao"
         }
-      }
+      },
+      "notes": "Template resumo_conversa (pt_BR) via Graph API - funciona fora da janela de 24h."
     }
   ],
   "connections": {
@@ -653,12 +669,23 @@
       "main": [
         [
           {
-            "node": "Notificar Advogado",
+            "node": "Montar Aviso do Advogado",
             "type": "main",
             "index": 0
           }
         ],
         []
+      ]
+    },
+    "Montar Aviso do Advogado": {
+      "main": [
+        [
+          {
+            "node": "Notificar Advogado",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

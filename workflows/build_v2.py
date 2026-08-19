@@ -357,6 +357,49 @@ const payload = {
 return [{ json: { ...d, crmPayload: payload } }];
 """
 
+CODE_AVISO_ADVOGADO = r"""const d = $input.all()[0].json;
+
+// Parametros de template do WhatsApp NAO aceitam quebra de linha, tab,
+// nem 4+ espacos seguidos. A Meta rejeita a mensagem inteira se tiver.
+function limpa(txt, max) {
+  const t = String(txt == null ? '' : txt)
+    .replace(/([^.!?;:])\s*[\r\n]+\s*/g, '$1. ')
+    .replace(/\s*[\r\n\t]+\s*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\*/g, '')
+    .trim();
+  return (t.slice(0, max) || 'Nao informado');
+}
+
+const params = {
+  nome_cliente:       limpa(d.nome, 80),
+  whatsapp_cliente:   limpa(d.phone, 30),
+  servico:            limpa(d.servico, 120),
+  resumo_atendimento: limpa(d.resumo, 800)
+};
+
+const waBody = {
+  messaging_product: 'whatsapp',
+  to: '5511941321970',
+  type: 'template',
+  template: {
+    name: 'resumo_conversa',
+    language: { code: 'pt_BR' },
+    components: [{
+      type: 'body',
+      parameters: [
+        { type: 'text', parameter_name: 'nome_cliente',       text: params.nome_cliente },
+        { type: 'text', parameter_name: 'whatsapp_cliente',   text: params.whatsapp_cliente },
+        { type: 'text', parameter_name: 'servico',            text: params.servico },
+        { type: 'text', parameter_name: 'resumo_atendimento', text: params.resumo_atendimento }
+      ]
+    }]
+  }
+};
+
+return [{ json: { ...d, templateParams: params, waBody } }];
+"""
+
 # ---------------------------------------------------------------- PROMPT
 
 PROMPT = """Você é a *Ana*, do Escritório José Simeão Advocacia, especializado em Cannabis Medicinal. Você atende pelo WhatsApp.
@@ -725,31 +768,26 @@ nodes.append({
     "name": "Lead Qualificado?",
 })
 
-NOTIF = (
-    "=🌿 *Novo Lead - Simeao Advogados*\n\n"
-    "Atendimento WhatsApp\n\n"
-    "Nome: {{ $json.nome || 'Nao informado' }}\n"
-    "WhatsApp: {{ $json.phone || 'Nao informado' }}\n"
-    "Servico: {{ $json.servico || 'Nao informado' }}\n\n"
-    "📋 *Resumo da conversa:*\n{{ $json.resumo || 'Sem resumo registrado' }}\n\n"
-    "⚠️ *Entrar em contato o quanto antes!*"
-)
+nodes.append(code_node("Montar Aviso do Advogado", CODE_AVISO_ADVOGADO, "v2-aviso-0020", [80, 560]))
 
 nodes.append({
     "parameters": {
-        "operation": "send",
-        "phoneNumberId": "1120643227802579",
-        "recipientPhoneNumber": "+55 11 94132-1970",
-        "textBody": NOTIF,
-        "additionalFields": {},
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/1120643227802579/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": True,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.waBody) }}",
+        "options": {},
     },
-    "type": "n8n-nodes-base.whatsApp",
-    "typeVersion": 1.1,
-    "position": [80, 560],
+    "type": "n8n-nodes-base.httpRequest",
+    "typeVersion": 4.2,
+    "position": [300, 560],
     "id": "v2-notif-0018",
     "name": "Notificar Advogado",
-    "webhookId": "b2f1c9d0-1111-4a2b-9c3d-000000000018",
     "credentials": {"whatsAppApi": {"id": "iwP7SMgYbk6Pzkhs", "name": "Simeao"}},
+    "notes": "Template resumo_conversa (pt_BR) via Graph API - funciona fora da janela de 24h.",
 })
 
 # ---------------------------------------------------------------- CONNECTIONS
@@ -787,9 +825,10 @@ connections = {
     ]]},
     "Enviar Lead para o CRM": {"main": [[]]},
     "Lead Qualificado?": {"main": [
-        [{"node": "Notificar Advogado", "type": "main", "index": 0}],
+        [{"node": "Montar Aviso do Advogado", "type": "main", "index": 0}],
         [],
     ]},
+    "Montar Aviso do Advogado": {"main": [[{"node": "Notificar Advogado", "type": "main", "index": 0}]]},
 }
 
 workflow = {

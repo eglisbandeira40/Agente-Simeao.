@@ -67,13 +67,17 @@ function turno(state, texto, aiStub) {
     outs[alvo] = saida;
   }
 
-  let crm = null, notificou = false;
+  let crm = null, notificou = false, aviso = null;
   if (saida.atendimentoFinalizado) {
     outs['Processar Resposta da IA'] = saida;
     crm = runCode('Montar Payload CRM', state.static, outs, saida).crmPayload;
     notificou = !!saida.qualificado;
+    if (notificou) {
+      const av = runCode('Montar Aviso do Advogado', state.static, outs, saida);
+      aviso = av.waBody;
+    }
   }
-  return { node: alvo, msg: saida.message, saida, crm, notificou };
+  return { node: alvo, msg: saida.message, saida, crm, notificou, aviso };
 }
 
 // ---------------------------------------------------------------- helpers
@@ -494,6 +498,38 @@ head('CENARIO T — a trava de prescricao vale SO para paciente/familiar');
   const r2 = turno(st2, 'quero pra mim', ai2);
   check('paciente e travado sem prescricao', r2.saida.atendimentoFinalizado === false);
   check('paciente recebe a pergunta de corte', /prescrição médica/i.test(r2.msg), r2.msg);
+}
+
+// ================================================================ U
+head('CENARIO U — aviso ao advogado vai como template (fora da janela de 24h)');
+{
+  const st = novoState('5511900000020', 'Teste');
+  const ai = aiRoteiro([
+    'Entendi! Ja tem prescricao medica? 🌿[PERFIL:cliente]',
+    'Otimo! O Dr. Jose Simeao fala com voce em breve. 🌿[PRESCRICAO:sim]\n[RESUMO_INICIO]\nBusca HC autocultivo.\nPrescricao medica: sim.\nLaudo agronomico: nao informado.\n[RESUMO_FIM]\n[ATENDIMENTO_CONCLUIDO]',
+  ]);
+  turno(st, 'oi', ai);
+  turno(st, 'Teste', ai);
+  turno(st, 'quero HC pra uso proprio', ai);
+  const r = turno(st, 'tenho sim', ai);
+
+  check('gerou o aviso', !!r.aviso);
+  const t = r.aviso.template;
+  check('usa o template resumo_conversa', t.name === 'resumo_conversa', t.name);
+  check('idioma pt_BR', t.language.code === 'pt_BR', t.language.code);
+  check('type = template (nao texto livre)', r.aviso.type === 'template', r.aviso.type);
+
+  const ps = t.components[0].parameters;
+  check('4 parametros', ps.length === 4, ps.length);
+  check('nomes batem com o template aprovado',
+        JSON.stringify(ps.map(x => x.parameter_name)) ===
+        JSON.stringify(['nome_cliente','whatsapp_cliente','servico','resumo_atendimento']),
+        ps.map(x => x.parameter_name));
+  check('nenhum parametro com quebra de linha',
+        ps.every(x => !/[\r\n\t]/.test(x.text)), ps.map(x => x.text));
+  check('nenhum parametro vazio', ps.every(x => x.text && x.text.length > 0));
+  check('resumo chegou no parametro certo',
+        /Busca HC autocultivo/.test(ps[3].text), ps[3].text);
 }
 
 console.log('\n' + '='.repeat(70));

@@ -8,17 +8,17 @@
         "nodeCredentialType": "whatsAppApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({messaging_product:'whatsapp',to:'5511941321970',type:'template',template:{name:'resumo_conversa',language:{code:'pt_BR'},components:[{type:'body',parameters:[{type:'text',parameter_name:'nome_cliente',text:String($('Dados Completos?').item.json.nome==null?'':$('Dados Completos?').item.json.nome).replace(/[\\r\\n\\t]+/g,'. ').replace(/\\s{2,}/g,' ').replace(/\\*/g,'').trim().slice(0,80)||'Nao informado'},{type:'text',parameter_name:'whatsapp_cliente',text:String(($('Dados Completos?').item.json.telefone||$('Dados Completos?').item.json.phone)==null?'':($('Dados Completos?').item.json.telefone||$('Dados Completos?').item.json.phone)).replace(/[\\r\\n\\t]+/g,'. ').replace(/\\s{2,}/g,' ').replace(/\\*/g,'').trim().slice(0,30)||'Nao informado'},{type:'text',parameter_name:'servico',text:String($('Dados Completos?').item.json.servico==null?'':$('Dados Completos?').item.json.servico).replace(/[\\r\\n\\t]+/g,'. ').replace(/\\s{2,}/g,' ').replace(/\\*/g,'').trim().slice(0,120)||'Nao informado'},{type:'text',parameter_name:'resumo_atendimento',text:String($('Dados Completos?').item.json.resumo==null?'':$('Dados Completos?').item.json.resumo).replace(/[\\r\\n\\t]+/g,'. ').replace(/\\s{2,}/g,' ').replace(/\\*/g,'').trim().slice(0,800)||'Nao informado'}]}]}}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: '5511941321970',\n  type: 'template',\n  template: {\n    name: 'resumo_conversa',\n    language: { code: 'pt_BR' },\n    components: [\n      { type: 'body', parameters: [\n        {\n          type: 'text',\n          parameter_name: 'nome_cliente',\n          text: String($('Dados Completos?').item.json.nome == null ? '' : $('Dados Completos?').item.json.nome)\n          .replace(/[\\r\\n\\t]+/g, '. ')\n          .replace(/\\s\\s+/g, ' ')\n          .replace(/\\*/g, '')\n          .trim()\n          .slice(0, 80) || 'Nao informado'\n        },\n        {\n          type: 'text',\n          parameter_name: 'whatsapp_cliente',\n          text: String(($('Dados Completos?').item.json.telefone || $('Dados Completos?').item.json.phone) == null ? '' : ($('Dados Completos?').item.json.telefone || $('Dados Completos?').item.json.phone))\n          .replace(/[\\r\\n\\t]+/g, '. ')\n          .replace(/\\s\\s+/g, ' ')\n          .replace(/\\*/g, '')\n          .trim()\n          .slice(0, 30) || 'Nao informado'\n        },\n        {\n          type: 'text',\n          parameter_name: 'servico',\n          text: String($('Dados Completos?').item.json.servico == null ? '' : $('Dados Completos?').item.json.servico)\n          .replace(/[\\r\\n\\t]+/g, '. ')\n          .replace(/\\s\\s+/g, ' ')\n          .replace(/\\*/g, '')\n          .trim()\n          .slice(0, 120) || 'Nao informado'\n        },\n        {\n          type: 'text',\n          parameter_name: 'resumo_atendimento',\n          text: String($('Dados Completos?').item.json.resumo == null ? '' : $('Dados Completos?').item.json.resumo)\n          .replace(/[\\r\\n\\t]+/g, '. ')\n          .replace(/\\s\\s+/g, ' ')\n          .replace(/\\*/g, '')\n          .trim()\n          .slice(0, 800) || 'Nao informado'\n        }\n      ] }\n    ]\n  }\n}) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -4464,
+        -4200,
         -864
       ],
-      "id": "81ae8259-a908-4860-9132-8adeff4f472b",
-      "name": "Notificar Advogado",
+      "id": "b7f1a2c3-9d4e-4a5b-8c6d-000000000099",
+      "name": "Notificar Advogado Template",
       "credentials": {
         "whatsAppApi": {
           "id": "iwP7SMgYbk6Pzkhs",

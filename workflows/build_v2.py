@@ -357,7 +357,14 @@ const payload = {
 return [{ json: { ...d, crmPayload: payload } }];
 """
 
-CODE_AVISO_ADVOGADO = r"""const d = $input.all()[0].json;
+CODE_AVISO_ADVOGADO = r"""// ┌──────────────────────────────────────────────────────────────┐
+// │ CONFIG DO TEMPLATE — troque aqui quando o novo for aprovado  │
+// └──────────────────────────────────────────────────────────────┘
+const TEMPLATE = 'resumo_conversa';   // <<< trocar por 'registro_atendimento'
+const IDIOMA   = 'pt_BR';
+const ADVOGADO = '5511941321970';
+
+const d = $input.all()[0].json;
 
 // Parametros de template do WhatsApp NAO aceitam quebra de linha, tab,
 // nem 4+ espacos seguidos. A Meta rejeita a mensagem inteira se tiver.
@@ -380,11 +387,11 @@ const params = {
 
 const waBody = {
   messaging_product: 'whatsapp',
-  to: '5511941321970',
+  to: ADVOGADO,
   type: 'template',
   template: {
-    name: 'resumo_conversa',
-    language: { code: 'pt_BR' },
+    name: TEMPLATE,
+    language: { code: IDIOMA },
     components: [{
       type: 'body',
       parameters: [
